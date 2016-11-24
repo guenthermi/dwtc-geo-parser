@@ -1,0 +1,5 @@
+old_redis_dumps/
+__pycache__/
+*.rdb
+*.gz
+*.db
