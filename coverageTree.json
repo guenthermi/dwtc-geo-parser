@@ -1,0 +1,28 @@
+{
+	"0": {
+		"name": "geo_entity",
+		"features": [],
+		"lower_bound": 0.8,
+		"successors": ["1", "2", "3"]
+	},
+	"1": {
+		"name": "city",
+		"features": ["P"],
+		"lower_bound": 0.9,
+		"successors": []
+	},
+	"2": {
+		"name": "country",
+		"features": ["A"],
+		"lower_bound": 0.8,
+		"successors": []
+	},
+	"3": {
+		"name": "object",
+		"features": ["H", "L", "R", "S", "T", "U", "V"],
+		"lower_bound": 0.8,
+		"successors": []
+	}
+
+}
+
