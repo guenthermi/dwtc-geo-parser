@@ -28,9 +28,17 @@ class GazetteerResult:
 	def getResult(self):
 		return self.result
 
-	def countFeatureValues(self, precondition, feature):
-		# print('precondition', precondition)
-		# print('feature', feature)
+	def countFeatureValues(self, precondition, feature, featureValues, type):
+		if type == 'empty':
+			return len(self.result), 'single'
+		if type == 'all':
+			return self._countFeatureValuesAll(precondition, feature), 'complex'
+		if type == 'specific':
+			return self._countFeatureValuesSpecific(precondition, feature, featureValues), 'complex'
+		if type == 'minimum':
+			return self._countFeatureValuesMinimum(precondition, feature, featureValues), 'single'
+
+	def _countFeatureValuesAll(self, precondition, feature):
 		counts = dict();
 		for name in self.result:
 			posibilities = self._hasFeatures(name, precondition)
@@ -43,6 +51,33 @@ class GazetteerResult:
 				else:
 					counts[value] = 1
 		return counts
+
+	def _countFeatureValuesSpecific(self, precondition, feature, legalValues):
+		counts = dict();
+		for name in self.result:
+			posibilities = self._hasFeatures(name, precondition)
+			valueSet = set()
+			for entry in posibilities:
+				if entry[GazetteerResult.FEATURE_INDICES[feature]] in legalValues:
+					valueSet.add(entry[GazetteerResult.FEATURE_INDICES[feature]])
+			for value in valueSet:	
+				if value in counts:
+					counts[value] += 1
+				else:
+					counts[value] = 1
+		return counts		
+
+	def _countFeatureValuesMinimum(self, precondition, feature, minimum):
+		count = 0
+		for name in self.result:
+			posibilities = self._hasFeatures(name, precondition)
+			validExists = False
+			for entry in posibilities:
+				if entry[GazetteerResult.FEATURE_INDICES[feature]] > minimum:
+					validExists = True
+			if validExists:
+				count += 1
+		return count
 
 	def _hasFeatures(self, name, features):
 		""" Returns possible geo entities for a given name that have all given features"""

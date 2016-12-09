@@ -45,22 +45,13 @@ def gazetteer_test(columns, gazetteer):
 			maxNumber = node[2]
 			maxFeatureCount = 0
 			maxFeature = ''
-			if node[1]['feature'] != "":
-				counts = res.countFeatureValues(node[0], node[1]['feature']) # at the moment support only for a single feature
-				if node[1]['featureValuesType'] == 'all':
-					maxFeature = max(counts, key=counts.get)
-					maxFeatureCount = counts[maxFeature]
-				if node[1]['featureValuesType'] == 'array': 
-					for key in counts:
-						if key in node[1]['featureValues']:
-							if counts[key] > maxFeatureCount:
-								maxFeatureCount = counts[key]
-								maxFeature = key
-				if node[1]['featureValuesType'] == 'minimum':
-
-					print(counts)
-			else:
-				maxFeatureCount = cov
+			countsResponse, valueType = res.countFeatureValues(node[0], node[1]['feature'], node[1]['featureValues'], node[1]['featureValuesType'])
+			if valueType == 'single':
+				maxFeatureCount = countsResponse
+			if valueType == 'complex':
+				if countsResponse:
+					maxFeature = max(countsResponse, key=countsResponse.get)
+					maxFeatureCount = countsResponse[maxFeature]
 			if (maxFeatureCount / maxNumber) >= node[1]['lower_bound']:
 				if (len(node[1]['successors']) == 0):
 					result.append(columns['column_indices'][i])
@@ -70,20 +61,6 @@ def gazetteer_test(columns, gazetteer):
 					if node[1]['feature']:
 						precondition[node[1]['feature']] = maxFeature
 					nodes.append((precondition, newNode, maxFeatureCount))
-
-		# numFound = res['numFound']
-		# numColumn = res['numColumn']
-
-		# minNumFoundRate = MIN_NUM_FOUND_FACTOR - (0.5 / numColumn)
-		# minFeatureClassRate = MIN_FEATURE_CLASS_FACTOR #- (0.5 / numColumn)
-
-		# numFoundRate = numFound / numColumn
-		# if numFoundRate > minNumFoundRate:
-		# 	featureClasses = res['counts']['featureClasses']
-		# 	max_feature = max(featureClasses.keys(),key=lambda x: featureClasses[x])
-		# 	featureClassRate = featureClasses[max_feature] / numFound
-		# 	if (featureClassRate > minFeatureClassRate):
-		# 		result.append(columns['column_indices'][i])
 
 	return result
 

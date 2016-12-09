@@ -10,7 +10,7 @@
 	"1": {
 		"name": "city",
 		"feature": "featureClass",
-		"featureValuesType": "array",
+		"featureValuesType": "specific",
 		"featureValues": ["P"],
 		"lower_bound": 0.9,
 		"successors": ["4", "5"]
@@ -19,7 +19,7 @@
 		"name": "country",
 		"feature": "featureClass",
 		"featureValues": ["A"],
-		"featureValuesType": "array",
+		"featureValuesType": "specific",
 		"lower_bound": 0.8,
 		"successors": []
 	},
@@ -27,7 +27,7 @@
 		"name": "object",
 		"feature": "featureClass",
 		"featureValues": ["H", "L", "R", "S", "T", "U", "V"],
-		"featureValuesType": "array",
+		"featureValuesType": "specific",
 		"lower_bound": 0.8,
 		"successors": []
 	},
