@@ -1,25 +1,49 @@
 {
 	"0": {
 		"name": "geo_entity",
-		"features": [],
+		"feature": "",
+		"featureValues": "",
+		"featureValuesType": "empty",
 		"lower_bound": 0.8,
 		"successors": ["1", "2", "3"]
 	},
 	"1": {
 		"name": "city",
-		"features": ["P"],
+		"feature": "featureClass",
+		"featureValuesType": "array",
+		"featureValues": ["P"],
 		"lower_bound": 0.9,
-		"successors": []
+		"successors": ["4", "5"]
 	},
 	"2": {
 		"name": "country",
-		"features": ["A"],
+		"feature": "featureClass",
+		"featureValues": ["A"],
+		"featureValuesType": "array",
 		"lower_bound": 0.8,
 		"successors": []
 	},
 	"3": {
 		"name": "object",
-		"features": ["H", "L", "R", "S", "T", "U", "V"],
+		"feature": "featureClass",
+		"featureValues": ["H", "L", "R", "S", "T", "U", "V"],
+		"featureValuesType": "array",
+		"lower_bound": 0.8,
+		"successors": []
+	},
+	"4": {
+		"name": "local_city",
+		"feature": "countryCode",
+		"featureValues": "",
+		"featureValuesType": "all",
+		"lower_bound": 0.8,
+		"successors": []
+	},
+	"5": {
+		"name": "big_city",
+		"feature": "population",
+		"featureValues": 100000,
+		"featureValuesType": "minimum",
 		"lower_bound": 0.8,
 		"successors": []
 	}

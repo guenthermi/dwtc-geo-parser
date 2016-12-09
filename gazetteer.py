@@ -1,77 +1,97 @@
 #!/usr/bin/python3
-#!/usr/bin/python3
 
 import sqlite3
 import sys
 
 # TODO implement function to determine if single entities in a column do not fit in
 
+class GazetteerResult:
+
+	# mapping of feature names to tuple positions 
+	FEATURE_INDICES = {
+		'featureClass': 0, 
+		'featureCode': 1, 
+		'countryCode': 2, 
+		'timezone': 3,
+		'population': 4
+	}
+	
+	def __init__(self):
+		self.result = dict()
+	
+	def addResult(self, name, featureClass, featureCode, countryCode, timezone, population):
+		if name in self.result:
+			self.result[name].add((featureClass, featureCode, countryCode, timezone, population))
+		else:
+			self.result[name] = set({(featureClass, featureCode, countryCode, timezone, population)})
+
+	def getResult(self):
+		return self.result
+
+	def countFeatureValues(self, precondition, feature):
+		# print('precondition', precondition)
+		# print('feature', feature)
+		counts = dict();
+		for name in self.result:
+			posibilities = self._hasFeatures(name, precondition)
+			valueSet = set()
+			for entry in posibilities:
+				valueSet.add(entry[GazetteerResult.FEATURE_INDICES[feature]])
+			for value in valueSet:	
+				if value in counts:
+					counts[value] += 1
+				else:
+					counts[value] = 1
+		return counts
+
+	def _hasFeatures(self, name, features):
+		""" Returns possible geo entities for a given name that have all given features"""
+		posibilities = set()
+		featureSet = self.result[name]
+		for featureTuple in featureSet:
+			valid = True
+			for featureName in features:
+				if features[featureName] != featureTuple[GazetteerResult.FEATURE_INDICES[featureName]]:
+					valid = False
+			if valid:
+				posibilities.add(featureTuple)
+		return posibilities
+
+
+
 class Gazetteer:
 	def __init__(self, db):
 		self.con = sqlite3.connect(db)
 		self.cur = self.con.cursor()
 
-	def lookupName(self, name):
-		self.cur.execute("SELECT GeoEntities.GeonameId, GeoEntities.name, GeoEntities.FeatureClass, GeoEntities.FeatureCode, GeoEntities.CountryCode, GeoEntities.Timezone FROM Aliases INNER JOIN GeoEntities ON Aliases.GeonameId=GeoEntities.GeonameId WHERE AlternateName = '" + name.replace('’','’’').replace("'","''") + "'") # inner join with GeoEntities
+	def lookupName(self, name, gResult):
+		self.cur.execute("SELECT GeoEntities.GeonameId, GeoEntities.name, GeoEntities.FeatureClass, GeoEntities.FeatureCode, GeoEntities.CountryCode, GeoEntities.Timezone, GeoEntities.Population FROM Aliases INNER JOIN GeoEntities ON Aliases.GeonameId=GeoEntities.GeonameId WHERE AlternateName = '" + name.replace('’','’’').replace("'","''") + "'") # inner join with GeoEntities
 		rows = self.cur.fetchall()
-
-		featureClasses = set()
-		featureCodes = set()
-		countryCodes = set()
-		timezones = set()
-		entrySet = set()
 
 		# check if response is empty
 		if rows == []:
-			return {}
+			return gResult
 		
-		# create result
+		# add to result
 		for row in rows:
-			if row[2]:
-				featureClasses.add(row[2])
-			if row[3]:
-				featureCodes.add(row[3])
-			if row[4]:
-				countryCodes.add(row[4])
-			if row[5]:
-				timezones.add(row[5])
-			entrySet.add((row[2], row[3], row[4], row[5]))
+			gResult.addResult(name, row[2], row[3], row[4], row[5], row[6])
 
-		return {'featureClasses': featureClasses, 'featureCodes': featureCodes, 'countryCodes': countryCodes, 'timezones': timezones, 'entrySet': entrySet}
+		return
 
 	def lookupColumn(self, column):
-		# return pair of counts array and result array (including also counts)
-		featureClasses = dict()
-		featureCodes = dict()
-		countryCodes = dict()
-		timezones = dict()
-		entrySet = dict()
-		counts = {'featureClasses': featureClasses, 'featureCodes': featureCodes, 'countryCodes': countryCodes, 'timezones': timezones, 'entrySet': entrySet}
-		result = {'counts': counts, 'numFound': 0, 'numColumn': len(column)}
-		for entry in column: # column should be a set not a list
-			entryData = self.lookupName(entry)
-			if len(entryData) > 0:
-				result['numFound'] += 1
-				for feature in entryData:
-					for key in entryData[feature]:
-						self._increaseFeatureCounts(key, counts[feature])
-		return result
-
-	def _increaseFeatureCounts(self, key, counts):
-		if key:
-			if key in counts:
-				counts[key] += 1
-			else:
-				counts[key] = 1
+		""" Returns the GazetteerResult for a column of names and the general geo entities coverage """
+		result = GazetteerResult()
+		for entry in column:
+			self.lookupName(entry, result)
+		return result, len(result.getResult())
 
 def main(argc, argv):
 	g = Gazetteer('index.db')
-	res = g.lookupColumn(['Luga', 'Paris', 'Berlin', 'Dresden', 'Bautzen', 'Leipzig'])
-	print(res['counts']['featureClasses'])
-	print('')
-	print(res['numFound'])
-	print('')
-	print(res['numColumn'])
+	res, cov = g.lookupColumn(['Luga', 'Paris', 'Berlin', 'Dresden', 'Bautzen', 'Leipzig'])
+	print('Coverage: ', cov)
+	print('Result:', res.getResult())
+	print(res.countFeatureValues({}, 'featureClass'));
+	print(res.countFeatureValues({'featureClass': 'R'}, 'countryCode'));
 
 if __name__ == "__main__":
 	main(len(sys.argv), sys.argv)

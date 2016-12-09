@@ -2,6 +2,7 @@
 
 from reader import *
 from gazetteer import *
+from coverageScores import *
 import preprocessor as pre
 
 import geopy
@@ -21,6 +22,8 @@ GEO_NAMES_LOCATION = 'allCountries.txt.gz'
 
 GAZETTEER_INDEX_LOCATION = 'index.db'
 
+COVERAGE_TREE_LOCATION = 'coverageTree.json'
+
 
 def post(table):
 	return;
@@ -29,21 +32,59 @@ def gazetteer_test(columns, gazetteer):
 	result = []
 	MIN_NUM_FOUND_FACTOR = 0.7
 	MIN_FEATURE_CLASS_FACTOR = 0.99
+
+	tree = CoverageTree(COVERAGE_TREE_LOCATION)
+
 	for i, col in enumerate(columns['columns']):
-		res = gazetteer.lookupColumn(col[0])
-		numFound = res['numFound']
-		numColumn = res['numColumn']
+		res, cov = gazetteer.lookupColumn(col[0])
 
-		minNumFoundRate = MIN_NUM_FOUND_FACTOR - (0.5 / numColumn)
-		minFeatureClassRate = MIN_FEATURE_CLASS_FACTOR #- (0.5 / numColumn)
+		nodes = [({}, tree.getOrigin(), len(set(col[0])))] # tuple of precondition, node, maxNumber
+		while len(nodes) > 0:
+			node = nodes[-1]
+			nodes = nodes[:-1]
+			maxNumber = node[2]
+			maxFeatureCount = 0
+			maxFeature = ''
+			if node[1]['feature'] != "":
+				counts = res.countFeatureValues(node[0], node[1]['feature']) # at the moment support only for a single feature
+				if node[1]['featureValuesType'] == 'all':
+					maxFeature = max(counts, key=counts.get)
+					maxFeatureCount = counts[maxFeature]
+				if node[1]['featureValuesType'] == 'array': 
+					for key in counts:
+						if key in node[1]['featureValues']:
+							if counts[key] > maxFeatureCount:
+								maxFeatureCount = counts[key]
+								maxFeature = key
+				if node[1]['featureValuesType'] == 'minimum':
 
-		numFoundRate = numFound / numColumn
-		if numFoundRate > minNumFoundRate:
-			featureClasses = res['counts']['featureClasses']
-			max_feature = max(featureClasses.keys(),key=lambda x: featureClasses[x])
-			featureClassRate = featureClasses[max_feature] / numFound
-			if (featureClassRate > minFeatureClassRate):
-				result.append(columns['column_indices'][i])
+					print(counts)
+			else:
+				maxFeatureCount = cov
+			if (maxFeatureCount / maxNumber) >= node[1]['lower_bound']:
+				if (len(node[1]['successors']) == 0):
+					result.append(columns['column_indices'][i])
+					break
+				for newNode in node[1]['successors']:
+					precondition = node[0]
+					if node[1]['feature']:
+						precondition[node[1]['feature']] = maxFeature
+					nodes.append((precondition, newNode, maxFeatureCount))
+
+		# numFound = res['numFound']
+		# numColumn = res['numColumn']
+
+		# minNumFoundRate = MIN_NUM_FOUND_FACTOR - (0.5 / numColumn)
+		# minFeatureClassRate = MIN_FEATURE_CLASS_FACTOR #- (0.5 / numColumn)
+
+		# numFoundRate = numFound / numColumn
+		# if numFoundRate > minNumFoundRate:
+		# 	featureClasses = res['counts']['featureClasses']
+		# 	max_feature = max(featureClasses.keys(),key=lambda x: featureClasses[x])
+		# 	featureClassRate = featureClasses[max_feature] / numFound
+		# 	if (featureClassRate > minFeatureClassRate):
+		# 		result.append(columns['column_indices'][i])
+
 	return result
 
 def processTable(table, lookup, line_count, out=False):
