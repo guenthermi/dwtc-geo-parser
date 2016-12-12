@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sqlite3
+import redis
 import sys
 
 # TODO implement function to determine if single entities in a column do not fit in
@@ -98,6 +99,7 @@ class Gazetteer:
 	def __init__(self, db):
 		self.con = sqlite3.connect(db)
 		self.cur = self.con.cursor()
+		self.r = redis.StrictRedis()
 
 	def lookupName(self, name, gResult):
 		self.cur.execute("SELECT GeoEntities.GeonameId, GeoEntities.name, GeoEntities.FeatureClass, GeoEntities.FeatureCode, GeoEntities.CountryCode, GeoEntities.Timezone, GeoEntities.Population FROM Aliases INNER JOIN GeoEntities ON Aliases.GeonameId=GeoEntities.GeonameId WHERE AlternateName = '" + name.replace('’','’’').replace("'","''") + "'") # inner join with GeoEntities
@@ -113,11 +115,25 @@ class Gazetteer:
 
 		return
 
+	def lookupNameRedis(self, name, gResult):
+		ids = self.r.get(name)
+		if ids:
+			ids = ids.split(b',')
+			for id in ids:
+				row = self.r.get(id).split(b'\t')
+				if row[3]:
+					row[3] = int(row[3])
+				else:
+					row[3] = 0
+				gResult.addResult(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[4].decode('utf-8'), row[3])
+		return
+
+
 	def lookupColumn(self, column):
 		""" Returns the GazetteerResult for a column of names and the general geo entities coverage """
 		result = GazetteerResult()
 		for entry in column:
-			self.lookupName(entry, result)
+			self.lookupNameRedis(entry, result)
 		return result, len(result.getResult())
 
 def main(argc, argv):
