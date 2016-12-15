@@ -3,6 +3,7 @@
 from reader import *
 from gazetteer import *
 from coverageScores import *
+from databaseOutput import *
 import preprocessor as pre
 
 import geopy
@@ -11,7 +12,7 @@ import gzip
 import sys
 import re
 
-HELP_TEXT = 'TODO create a useful help text'
+HELP_TEXT = '\033[1mclassify.py\033[0m selector destination [dump]...'
 
 LOG_LEVEL = 1
 
@@ -24,12 +25,14 @@ GAZETTEER_INDEX_LOCATION = 'index.db'
 
 COVERAGE_TREE_LOCATION = 'coverageTree.json'
 
+DB_OUTPUT = 'output.db'
+
 
 def post(table):
 	return;
 
 def gazetteer_test(columns, gazetteer):
-	result = []
+	result = dict()
 	MIN_NUM_FOUND_FACTOR = 0.7
 	MIN_FEATURE_CLASS_FACTOR = 0.99
 
@@ -54,8 +57,11 @@ def gazetteer_test(columns, gazetteer):
 					maxFeatureCount = countsResponse[maxFeature]
 			if (maxFeatureCount / maxNumber) >= node[1]['lower_bound']:
 				if (len(node[1]['successors']) == 0):
-					result.append(columns['column_indices'][i])
-					break
+					index = columns['column_indices'][i]
+					if index in result:
+						result[index].append(node[1]['name'])
+					else:
+						result[index] = [node[1]['name']]
 				for newNode in node[1]['successors']:
 					precondition = node[0]
 					if node[1]['feature']:
@@ -65,10 +71,11 @@ def gazetteer_test(columns, gazetteer):
 	return result
 
 def processTable(table, lookup, line_count, out=False):
-	res = pre.process(table['relation'])
+	res, headers = pre.process(table['relation'])
 	if len(res['columns']) > 0:
 		res = gazetteer_test(res, lookup)
-		print(res)
+		return res, headers
+	return dict(), headers
 
 def print_table(table, full=False):
 	for i, col in enumerate(table[0]):
@@ -82,34 +89,52 @@ def createOutputFile(filename):
 	f.write(bytes('{\n', encoding='utf-8'))
 	return f 
 
-def writeToOutput(file, result, id, url):
-	frame_beg = '"' + str(id) + '":{'
-	frame_end = '},\n'
-	table_str = '"geo_columns":' + str(result[1]).replace(' ', '') + ',"url":"' + url
-	file.write(bytes(frame_beg, encoding='utf-8'))
-	file.write(bytes(table_str, encoding='utf-8'))
-	file.write(bytes(frame_end, encoding='utf-8'))
-	return;
-
 def endOutputFile(file):
 	file.write(bytes('}\n', encoding='utf-8'))
 	file.close()
-	return;
+	return
+
+def writeToOutput(file, result, id, url, headers):
+	frame_beg = '"' + str(id) + '":{'
+	frame_end = '},\n'
+	table_str = '"geo_columns":' + json.dumps(result) + ',"url":"' + url + ',"headers":' + str(headers)
+	# file.write(bytes(frame_beg, encoding='utf-8'))
+	# file.write(bytes(table_str, encoding='utf-8'))
+	# file.write(bytes(frame_end, encoding='utf-8'))
+	file.write(frame_beg)
+	file.write(table_str)
+	file.write(frame_end)
+	return
 
 
 def main(argc, argv):
 	if (argc < 3):
 		print(HELP_TEXT)
 	else:
+
+		# determine target lines
+		targets = [0, float('inf')]
+		if argv[1].isdigit():
+			targets = [int(argv[1]), int(argv[1])]
+		if re.match('^[0-9]+-[0-9]+$', argv[1]):
+			targets = list(map(lambda x: int(x), argv[1].split('-')))
 		g = Gazetteer(GAZETTEER_INDEX_LOCATION)
+		dbOutput = DatabaseOutput(DB_OUTPUT)
 		for arg in argv[2:]:
 			reader = TableReader(arg)
 			table = reader.getNextTable()
 			while (table):
-				if reader.getLineCount() == int(argv[1]):
-					print(table['url'])
-					# print(table['relation'][1])
-					processTable(table, g, reader.getLineCount())
+				line_count = reader.getLineCount()
+				if (line_count >= targets[0]) and (line_count <= targets[1]):
+					print('Process Table', line_count, '...')
+					# print(table['url'])
+					# print('Table Position', table['tableNum'])
+					# print(table['relation'][3])
+					# print(table['relation'][5])
+					res, headers = processTable(table, g, reader.getLineCount())
+					dbOutput.addResult(res, line_count, table['url'], headers, table['relation'])
+					# writeToOutput(sys.stdout, res, reader.getLineCount(), table['url'], headers)
+
 				table = reader.getNextTable()
 
 if __name__ == "__main__":
