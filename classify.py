@@ -39,7 +39,7 @@ def gazetteer_test(columns, gazetteer):
 	tree = CoverageTree(COVERAGE_TREE_LOCATION)
 
 	for i, col in enumerate(columns['columns']):
-		res, cov = gazetteer.lookupColumn(col[0])
+		res, cov = gazetteer.lookupColumnFast(col[0])
 
 		nodes = [({}, tree.getOrigin(), len(set(col[0])))] # tuple of precondition, node, maxNumber
 		while len(nodes) > 0:
