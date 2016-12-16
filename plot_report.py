@@ -10,6 +10,8 @@ TEMPLATE_REPORT = 'evaluation/templates/report_tpl.tex'
 
 TEMPLATE_TABLE = 'evaluation/templates/table_tpl.tex'
 
+AUTHOR = 'AUTOGENERATE DOCUMENT'
+
 
 def processResult(cur, result):
 	query = 'SELECT * FROM Results'
@@ -48,11 +50,18 @@ def generateTableTexCode(id, table, url, geoColumns):
 
 	return buildFromTpl(tpl)
 
-def generateTexDocument(tableCodes):
+def generateTexDocument(tableCodes, dest):
 	# TODO read template
 	tpl = read_tpl(TEMPLATE_REPORT)
 	# TODO insert tableCodes into template
-
+	print(tpl)
+	for i in range(len(tpl[1])):
+		if tpl[1][i] == ' AUTHOR ':
+			tpl[1][i] = AUTHOR
+		if tpl[1][i] == ' CONTENT ':
+			tpl[1][i] = ''.join(tableCodes)
+	texFile = open(dest+'.tex', 'w')
+	texFile.write(buildFromTpl(tpl))
 	# TODO save tex document
 	# TODO call pdflatex on tex document
 	return
@@ -68,7 +77,7 @@ def processOutput(cur, dest):
 
 	texCodes = []
 	for i, table in enumerate(tables):
-		if i == 0: # TODO remove this at the end
+		if i < 3: # TODO remove this at the end
 			id, url, relations = table
 			relations = ast.literal_eval(relations)
 			cur.execute(queryGetGeoColumns, (str(id),))
@@ -105,7 +114,7 @@ def main(argc, argv):
 		cur = con.cursor()
 
 		tableTexCodes = processOutput(cur, dest)
-		generateTexDocument(tableTexCodes)
+		generateTexDocument(tableTexCodes, dest)
 
 
 if __name__ == "__main__":
