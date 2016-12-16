@@ -80,8 +80,8 @@ def writeIndex(src, cur, con):
 	print('Finished creation of indices')
 
 def createTables(cur):
-	cur.execute("CREATE TABLE GeoEntities(GeonameId INT PRIMARY KEY, Name TEXT, AlternateNames TEXT, Latitude REAL, Longitude REAL, FeatureClass VARCHAR(1), FeatureCode VARCHAR(10), CountryCode VARCHAR(2), Population INT, Elevation INT, Timezone VARCHAR(40))")
-	cur.execute("CREATE TABLE Aliases(GeonameId INT, AlternateName TEXT, FOREIGN KEY(GeonameId) REFERENCES GeoEntities(GeonameId))")
+	cur.execute("CREATE TABLE GeoEntities(GeonameId INTEGER PRIMARY KEY, Name TEXT, AlternateNames TEXT, Latitude REAL, Longitude REAL, FeatureClass VARCHAR(1), FeatureCode VARCHAR(10), CountryCode VARCHAR(2), Population INT, Elevation INT, Timezone VARCHAR(40))")
+	cur.execute("CREATE TABLE Aliases(GeonameId INTEGER, AlternateName TEXT, FOREIGN KEY(GeonameId) REFERENCES GeoEntities(GeonameId))")
 
 def main(argc, argv):
 	if (argc != 3):

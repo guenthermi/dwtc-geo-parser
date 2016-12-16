@@ -136,9 +136,32 @@ class Gazetteer:
 			self.lookupNameRedis(entry, result)
 		return result, len(result.getResult())
 
+	def lookupColumnFast(self, column):
+		gResult = GazetteerResult()
+		ids = dict()
+		pipe = self.r.pipeline()
+		for entry in column:
+			pipe.get(entry)
+		response = pipe.execute()
+		for i, entry in enumerate(column):
+			ids[entry] = response[i]
+		for name in ids:
+			idSet = ids[name]
+			if idSet:
+				idSet = idSet.split(b',')
+				for id in idSet:
+					row = self.r.get(id).split(b'\t')
+					if row[3]:
+						row[3] = int(row[3])
+					else:
+						row[3] = 0
+					gResult.addResult(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[4].decode('utf-8'), row[3])
+		return gResult, len(gResult.getResult())
+
+
 def main(argc, argv):
 	g = Gazetteer('index.db')
-	res, cov = g.lookupColumn(['Luga', 'Paris', 'Berlin', 'Dresden', 'Bautzen', 'Leipzig'])
+	res, cov = g.lookupColumnFast(['Luga', 'Paris', 'Berlin', 'Dresden', 'Bautzen', 'Leipzig'])
 	print('Coverage: ', cov)
 	print('Result:', res.getResult())
 	print(res.countFeatureValues({}, 'featureClass'));

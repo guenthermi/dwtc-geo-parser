@@ -1,0 +1,1 @@
+SELECT Results.ResultId, Results.Url, GeoColumns.ColumnId  FROM Interpretations INNER JOIN GeoColumns INNER JOIN Results WHERE Interpretations.ColumnId = GeoColumns.Id AND GeoColumns.ResultId = Results.ResultId AND Interpretations.Classification = 'country';

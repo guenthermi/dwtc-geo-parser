@@ -5,17 +5,17 @@
 		"featureValues": "",
 		"featureValuesType": "empty",
 		"lower_bound": 0.8,
-		"successors": ["1", "2", "3"]
+		"successors": ["001", "002", "003", "004", "005", "006", "007", "008", "009"]
 	},
-	"1": {
+	"001": {
 		"name": "city",
 		"feature": "featureClass",
 		"featureValuesType": "specific",
 		"featureValues": ["P"],
 		"lower_bound": 0.9,
-		"successors": ["4", "5"]
+		"successors": ["101", "102"]
 	},
-	"2": {
+	"002": {
 		"name": "country",
 		"feature": "featureClass",
 		"featureValues": ["A"],
@@ -23,15 +23,63 @@
 		"lower_bound": 0.8,
 		"successors": []
 	},
-	"3": {
-		"name": "object",
+	"003": {
+		"name": "water",
 		"feature": "featureClass",
-		"featureValues": ["H", "L", "R", "S", "T", "U", "V"],
+		"featureValues": ["H"],
 		"featureValuesType": "specific",
 		"lower_bound": 0.8,
 		"successors": []
 	},
-	"4": {
+	"004": {
+		"name": "area",
+		"feature": "featureClass",
+		"featureValues": ["L"],
+		"featureValuesType": "specific",
+		"lower_bound": 0.8,
+		"successors": []
+	},
+	"005": {
+		"name": "road",
+		"feature": "featureClass",
+		"featureValues": ["R"],
+		"featureValuesType": "specific",
+		"lower_bound": 0.8,
+		"successors": []
+	},
+	"006": {
+		"name": "spot",
+		"feature": "featureClass",
+		"featureValues": ["S"],
+		"featureValuesType": "specific",
+		"lower_bound": 0.95,
+		"successors": []
+	},
+	"007": {
+		"name": "mountain",
+		"feature": "featureClass",
+		"featureValues": ["T"],
+		"featureValuesType": "specific",
+		"lower_bound": 0.8,
+		"successors": []
+	},
+	"008": {
+		"name": "undersea",
+		"feature": "featureClass",
+		"featureValues": ["U"],
+		"featureValuesType": "specific",
+		"lower_bound": 0.8,
+		"successors": []
+	},
+	"009": {
+		"name": "forest",
+		"feature": "featureClass",
+		"featureValues": ["V"],
+		"featureValuesType": "specific",
+		"lower_bound": 0.8,
+		"successors": []
+	},
+	"101": {
 		"name": "local_city",
 		"feature": "countryCode",
 		"featureValues": "",
@@ -39,7 +87,7 @@
 		"lower_bound": 0.8,
 		"successors": []
 	},
-	"5": {
+	"102": {
 		"name": "big_city",
 		"feature": "population",
 		"featureValues": 100000,
