@@ -133,7 +133,7 @@ class Gazetteer:
 		""" Returns the GazetteerResult for a column of names and the general geo entities coverage """
 		result = GazetteerResult()
 		for entry in column:
-			self.lookupNameRedis(entry, result)
+			self.lookupName(entry, result)
 		return result, len(result.getResult())
 
 	def lookupColumnFast(self, column):

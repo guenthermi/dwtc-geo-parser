@@ -74,8 +74,8 @@ def writeIndex(src, cur, con):
 	con.commit()
 	print('Finsished creation of ', count, ' rows')
 	print('Create indices...')
-	cur.execute("CREATE INDEX index_geoEntities ON GeoEntities (GeonameId)")
-	cur.execute("CREATE INDEX index_aliases ON Aliases (AlternateName)")
+	cur.execute("CREATE INDEX index_geoEntities ON GeoEntities (GeonameId ASC)")
+	cur.execute("CREATE INDEX index_aliases ON Aliases (AlternateName ASC)")
 	con.commit()
 	print('Finished creation of indices')
 

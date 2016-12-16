@@ -3,4 +3,7 @@ __pycache__/
 *.rdb
 *.gz
 *.db
+*.aux
+*.log
+*.pdf
 *_old.py
