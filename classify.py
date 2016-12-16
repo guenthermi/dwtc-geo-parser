@@ -39,7 +39,7 @@ def gazetteer_test(columns, gazetteer):
 	tree = CoverageTree(COVERAGE_TREE_LOCATION)
 
 	for i, col in enumerate(columns['columns']):
-		res, cov = gazetteer.lookupColumn(col[0])
+		res, cov = gazetteer.lookupColumnFast(col[0])
 
 		nodes = [({}, tree.getOrigin(), len(set(col[0])))] # tuple of precondition, node, maxNumber
 		while len(nodes) > 0:
@@ -128,7 +128,7 @@ def main(argc, argv):
 				if (line_count >= targets[0]) and (line_count <= targets[1]):
 					print('Process Table', line_count, '...')
 					res, headers = processTable(table, g, reader.getLineCount())
-					# dbOutput.addResult(res, line_count, table['url'], headers, table['relation'])
+					dbOutput.addResult(res, line_count, table['url'], headers, table['relation'])
 					# writeToOutput(sys.stdout, res, reader.getLineCount(), table['url'], headers)
 
 				table = reader.getNextTable()
