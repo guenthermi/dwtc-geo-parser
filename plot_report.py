@@ -3,12 +3,13 @@
 import sqlite3
 import sys
 import ast
+import cgi
 
 HELP_TEXT = '\033[1mplot_report.py\033[0m database destination'
 
-TEMPLATE_REPORT = 'evaluation/templates/report_tpl.tex'
+TEMPLATE_REPORT = 'evaluation/templates/report_tpl.html'
 
-TEMPLATE_TABLE = 'evaluation/templates/table_tpl.tex'
+TEMPLATE_TABLE = 'evaluation/templates/table_tpl.html'
 
 AUTHOR = 'AUTOGENERATE DOCUMENT'
 
@@ -24,29 +25,25 @@ def generateTableTexCode(id, table, url, geoColumns):
 	tpl = read_tpl(TEMPLATE_TABLE)
 	table_name = 'TABLE ' + str(id)
 
-	table_schema = ''
-	for i in range(len(table)):
-		isGeo = (i in geoColumns)
-		if i in geoColumns:
-			table_schema += '| l | '
-		else:
-			table_schema += 'l '
-	table_schema = table_schema[:-1]
-
 	rows = ''
 	transpose = [list(i) for i in zip(*table)]
 	for row in transpose:
-		rows += ''.join([x+' & ' for x in row[:-1]]) + row[-1] + ' \\\\\n'
+		rows += '<tr>'
+		for i, x in enumerate(row):
+			if i in geoColumns:
+				rows += '<td style="background: #0f0">' + cgi.escape(x) + '</td>'
+			else:
+				rows += '<td>' + cgi.escape(x) + '</td>'
+		# rows += ''.join(['<td' + (i in geoColumns ? ' style="backgroud: #0f0"' : '') + '>' + x + '</td>' for i, x in row])
+		rows += '</tr>\n'
 
 	for i in range(len(tpl[1])):
 		if tpl[1][i] == ' TABLE_NAME ':
 			tpl[1][i] = table_name
-		if tpl[1][i] == ' TABLE_SCHEMA ':
-			tpl[1][i] = table_schema
 		if tpl[1][i] == ' ROWS ':
 			tpl[1][i] = rows
 		if tpl[1][i] == ' URL ':
-			tpl[1][i] = url
+			tpl[1][i] = cgi.escape(url)
 
 	return buildFromTpl(tpl)
 
@@ -60,7 +57,7 @@ def generateTexDocument(tableCodes, dest):
 			tpl[1][i] = AUTHOR
 		if tpl[1][i] == ' CONTENT ':
 			tpl[1][i] = ''.join(tableCodes)
-	texFile = open(dest+'.tex', 'w')
+	texFile = open(dest, 'w')
 	texFile.write(buildFromTpl(tpl))
 	# TODO save tex document
 	# TODO call pdflatex on tex document
@@ -77,12 +74,12 @@ def processOutput(cur, dest):
 
 	texCodes = []
 	for i, table in enumerate(tables):
-		if i < 3: # TODO remove this at the end
-			id, url, relations = table
-			relations = ast.literal_eval(relations)
-			cur.execute(queryGetGeoColumns, (str(id),))
-			geoCols = [x[0] for x in cur.fetchall()]
-			texCodes.append(generateTableTexCode(id, relations, url, geoCols))
+		# if i < 3: # TODO remove this at the end
+		id, url, relations = table
+		relations = ast.literal_eval(relations)
+		cur.execute(queryGetGeoColumns, (str(id),))
+		geoCols = [x[0] for x in cur.fetchall()]
+		texCodes.append(generateTableTexCode(id, relations, url, geoCols))
 
 	return texCodes
 
@@ -91,9 +88,9 @@ def read_tpl(filename):
 	# result = []
 	data = f.read()
 	result = ([],[])
-	splits = data.split('>>')
+	splits = data.split('}}')
 	for part in splits:
-		part = part.split('<<')
+		part = part.split('{{')
 		result[0].append(part[0])
 		if len(part) ==  2:
 			result[1].append(part[1])
