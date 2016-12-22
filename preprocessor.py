@@ -54,8 +54,8 @@ def process(table):
 		if not len(newcol[0]) == 0:
 			result['columns'].append(newcol)
 			result['column_indices'].append(i)
-	header_guess, headers = guess_header_positions(table, has_numbers)
-	result = remove_headers(result, header_guess)
+	headers = guess_header_positions(table, has_numbers)
+	result = remove_headers(result, headers)
 	return result, headers
 
 def filter_col(column):
@@ -95,8 +95,7 @@ def remove_headers(columns, header_guess):
 	return result
 
 def guess_header_positions(table, has_numbers):
-	result = []
-	headers = []
+	result = dict()
 	if has_numbers:
 		transpose = [list(i) for i in zip(*table)]
 		for i, row in enumerate(transpose):
@@ -106,7 +105,6 @@ def guess_header_positions(table, has_numbers):
 					containNumber = True
 					break
 			if not containNumber:
-				result.append(i)
-				headers.append(row)
-	return result, headers
+				result[i] = row
+	return result
 
