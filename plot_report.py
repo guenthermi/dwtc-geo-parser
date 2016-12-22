@@ -20,21 +20,24 @@ def processResult(cur, result):
 	rows = cur.fetchall()
 	return
 
-def generateTableTexCode(id, table, url, geoColumns):
+def generateTableHTMLCode(id, table, url, geoColumns, headerRows):
 	# TODO read template
 	tpl = read_tpl(TEMPLATE_TABLE)
 	table_name = 'TABLE ' + str(id)
+	html_url = '<a href="' + cgi.escape(url, quote=True) + '">' + cgi.escape(url) + '</a>'
 
 	rows = ''
 	transpose = [list(i) for i in zip(*table)]
-	for row in transpose:
-		rows += '<tr>'
-		for i, x in enumerate(row):
-			if i in geoColumns:
-				rows += '<td style="background: #0f0">' + cgi.escape(x) + '</td>'
+	for i, row in enumerate(transpose):
+		if i in headerRows:
+			rows += '<tr class="header-row">'
+		else:
+			rows += '<tr>'
+		for j, x in enumerate(row):
+			if j in geoColumns:
+				rows += '<td class="geo-entity">' + cgi.escape(x) + '</td>'
 			else:
 				rows += '<td>' + cgi.escape(x) + '</td>'
-		# rows += ''.join(['<td' + (i in geoColumns ? ' style="backgroud: #0f0"' : '') + '>' + x + '</td>' for i, x in row])
 		rows += '</tr>\n'
 
 	for i in range(len(tpl[1])):
@@ -43,49 +46,50 @@ def generateTableTexCode(id, table, url, geoColumns):
 		if tpl[1][i] == ' ROWS ':
 			tpl[1][i] = rows
 		if tpl[1][i] == ' URL ':
-			tpl[1][i] = cgi.escape(url)
+			tpl[1][i] = html_url
 
 	return buildFromTpl(tpl)
 
-def generateTexDocument(tableCodes, dest):
-	# TODO read template
+def generateHTMLDocument(tableCodes, dest):
+	# read template
 	tpl = read_tpl(TEMPLATE_REPORT)
-	# TODO insert tableCodes into template
+	# insert content into template
 	print(tpl)
 	for i in range(len(tpl[1])):
 		if tpl[1][i] == ' AUTHOR ':
 			tpl[1][i] = AUTHOR
 		if tpl[1][i] == ' CONTENT ':
 			tpl[1][i] = ''.join(tableCodes)
-	texFile = open(dest, 'w')
-	texFile.write(buildFromTpl(tpl))
-	# TODO save tex document
-	# TODO call pdflatex on tex document
+	htmlFile = open(dest, 'w')
+	htmlFile.write(buildFromTpl(tpl))
+	htmlFile.close()
 	return
 
 def processOutput(cur, dest):
-	# TODO define query to get the table
+	# query to get the table
 	queryGetTables = 'SELECT Results.ResultId, Results.Url, Results.DWTC_Table FROM Results'
-	# TODO define query to get geo columns
+	# query to get geo columns
 	queryGetGeoColumns = 'SELECT GeoColumns.ColumnId FROM Results INNER JOIN GeoColumns  ON Results.ResultId = GeoColumns.ResultId WHERE Results.ResultId = ?'
-	# TODO generate latex code for table
+	# query to get headers
+	queryGetHeaderRows = 'SELECT Headers.RowNumber FROM Results INNER JOIN Headers ON Results.ResultId = Headers.ResultId WHERE Results.ResultId = ?'
+
 	cur.execute(queryGetTables)
 	tables = cur.fetchall()
 
-	texCodes = []
+	HTMLCodes = []
 	for i, table in enumerate(tables):
-		# if i < 3: # TODO remove this at the end
 		id, url, relations = table
 		relations = ast.literal_eval(relations)
 		cur.execute(queryGetGeoColumns, (str(id),))
 		geoCols = [x[0] for x in cur.fetchall()]
-		texCodes.append(generateTableTexCode(id, relations, url, geoCols))
+		cur.execute(queryGetHeaderRows, (str(id),))
+		headerRows = [x[0] for x in cur.fetchall()]
+		HTMLCodes.append(generateTableHTMLCode(id, relations, url, geoCols, headerRows))
 
-	return texCodes
+	return HTMLCodes
 
 def read_tpl(filename):
 	f = open(filename, 'r')
-	# result = []
 	data = f.read()
 	result = ([],[])
 	splits = data.split('}}')
@@ -97,7 +101,6 @@ def read_tpl(filename):
 	return result
 
 def buildFromTpl(tpl):
-	# print(tpl[0][:-1])
 	return ''.join([x + tpl[1][i] for i, x in enumerate(tpl[0][:-1])]) + tpl[0][-1]
 
 def main(argc, argv):
@@ -110,8 +113,8 @@ def main(argc, argv):
 		con = sqlite3.connect(db_path)
 		cur = con.cursor()
 
-		tableTexCodes = processOutput(cur, dest)
-		generateTexDocument(tableTexCodes, dest)
+		tableHTMLCodes = processOutput(cur, dest)
+		generateHTMLDocument(tableHTMLCodes, dest)
 
 
 if __name__ == "__main__":

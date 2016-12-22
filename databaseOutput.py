@@ -24,7 +24,7 @@ class DatabaseOutput:
 			self.cur.execute("CREATE TABLE DWTC(Id INTEGER, Row INTEGER, Col INTEGER, Cell TEXT, FOREIGN KEY(Id) REFERENCES Results(ResultId))")
 		self.cur.execute("CREATE TABLE GeoColumns(Id INTEGER PRIMARY KEY AUTOINCREMENT, ResultId INTEGER, ColumnId INT, FOREIGN KEY(ResultId) REFERENCES Results(ResultId))")
 		self.cur.execute("CREATE TABLE Interpretations(Id INTEGER PRIMARY KEY AUTOINCREMENT, ColumnId INTEGER, Classification TEXT, FOREIGN KEY(ColumnId) REFERENCES GeoColumns(Id))")
-		self.cur.execute("CREATE TABLE Headers(Id INTEGER PRIMARY KEY AUTOINCREMENT, ResultId INTEGER, Header TEXT, FOREIGN KEY(ResultId) REFERENCES Results(ResultId))")
+		self.cur.execute("CREATE TABLE Headers(Id INTEGER PRIMARY KEY AUTOINCREMENT, ResultId INTEGER, RowNumber INT, Header TEXT, FOREIGN KEY(ResultId) REFERENCES Results(ResultId))")
 		self.con.commit()
 
 	def addResult(self, geoColumns, id, url, headers, table):
@@ -42,8 +42,8 @@ class DatabaseOutput:
 			columnId = self.cur.lastrowid
 			for name in geoColumns[column]:
 				self.cur.execute('INSERT INTO Interpretations VALUES (null, ?, ?)', (str(columnId), name))
-		for header in headers:
-			self.cur.execute('INSERT INTO Headers VALUES (null, ?, ?)', (str(resultId), str(header)))
+		for rowId in headers:
+			self.cur.execute('INSERT INTO Headers VALUES (null, ?, ?, ?)', (str(resultId), str(rowId), str(headers[rowId])))
 		self.con.commit()
 
 def main(argc, argv):
