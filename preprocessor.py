@@ -1,27 +1,41 @@
 
 import re
+import numpy as np
 
-RE_NUMBER = re.compile('^[0-9]*,?[0-9]*\.?[0-9]*$')
+from reader import *
+import sys
+
+RE_NUMBER = re.compile('^[\-]?[0-9]*,?[0-9]*\.?[0-9]*$')
 
 RE_NO_NUMBER = re.compile('[a-z,A-Z]')
 
-RE_ENGLISH = re.compile('^[a-z,A-Z,\s,\'.]*$')
+RE_ENGLISH = re.compile('^[a-z,A-Z,\-,\s,\'.]*$')
 
 RE_ADDRESS = re.compile('^(([a-z,A-Z,\']*|[0-9]*)(\s|$)+)*$')
 
-RE_GEO_COMLETE = re.compile('^(([a-z,A-Z,\'.\,]*|[0-9]*)(\s|$)+)*$')
+RE_GEO_COMLETE = re.compile('^(([a-z,A-Z,\-,\'.\,]*|[0-9]*)(\s|$)+)*$')
+
+RE_NO_RUBBISH = re.compile('.*[a-z,A-Z,0-9].*')
 
 class Rubbish:
-	UNVALID, VALID, NUMBER = range(3) 
+	UNVALID, VALID, NUMBER, GEO = range(4) 
 
 def rubbish(elem):
 	if elem.isdigit():
 		return Rubbish.NUMBER
-	if len(elem) < 2:
+	if (len(elem) < 2) or (not no_rubbish(elem)):
 		return Rubbish.UNVALID
 	if number(elem):
 		return Rubbish.NUMBER
+	if geo(elem):
+		return Rubbish.GEO
 	return Rubbish.VALID
+
+def no_rubbish(elem):
+	if RE_NO_RUBBISH:
+		return True
+	else:
+		return False
 
 def number(elem):
 	if RE_NUMBER.match(elem):
@@ -44,67 +58,213 @@ def geo(elem):
 	return False
 
 def process(table):
+	# possible geo columns
 	result = {'columns': [], 'column_indices':[]}
-	has_numbers = False
-	# iterate columns by index
-	for i, col in enumerate(table):
-		col_filtered = filter_col(col)
-		newcol = col_filtered['col']
-		has_numbers = has_numbers or col_filtered['has_numbers']
-		if not len(newcol[0]) == 0:
-			result['columns'].append(newcol)
-			result['column_indices'].append(i)
-	headers = guess_header_positions(table, has_numbers)
-	result = remove_headers(result, headers)
+
+	# TODO determine table direction
+
+	# detect rubbish rows and columns
+	rubbishRows, rubbishCols = detectRubbish(table)
+
+	# determine header, rubish rows
+	headers = guess_header_positions(table, rubbishRows, rubbishCols)
+	# print(headers)
+
+	# remove rubbish rows and headers
+	result = cleanup_table(table, rubbishRows, rubbishCols, headers)
+
 	return result, headers
 
-def filter_col(column):
-	output = ([],[])
-	count_others = 0
-	has_numbers = False
-	for i, elem in enumerate(column):
-		v = rubbish(elem)
-		if v == Rubbish.VALID:
-			if geo(elem):
-				output[0].append(elem)
-				output[1].append(i)
-			else:
-				count_others += 1
-		elif v == Rubbish.NUMBER:
-			count_others += 1
-			has_numbers = True
-	if len(output[0]) < count_others:
-		return {'col': ([],[]), 'has_numbers': has_numbers}
-	return {'col': output, 'has_numbers': has_numbers}
+def cleanup_table(table, rubbishRows, rubbishCols, headers):
+	result = {'columns': [], 'column_indices': []}
 
-def remove_headers(columns, header_guess):
-	result = {'columns': [], 'column_indices':[]}
-	now_empty = []
-	for i, col in enumerate(columns['columns']):
-		# col[0]: content, col[1]: indecies
-		newcol = ([],[])
-		for j, entry in enumerate(col[1]):
-			if not (entry in header_guess):
-				newcol[0].append(col[0][j])
-				newcol[1].append(col[1][j])
-		if newcol != ([],[]):
+	for i, col in enumerate(table):
+		newcol =  ([],[])
+		count = 0
+		for j, cell in enumerate(col):
+			if (not (j in rubbishRows)) and (not (j in headers)):
+				if rubbish(cell) == Rubbish.GEO:
+					newcol[0].append(cell)
+					newcol[1].append(j)
+		if len(set(newcol[0])) > 1:
 			result['columns'].append(newcol)
-			result['column_indices'].append(columns['column_indices'][i])
-		# remove entrys with col[1][j] in header_guess for every j
-		# check if header_guesses are the only entries in indecies
+			result['column_indices'].append(i)
 	return result
 
-def guess_header_positions(table, has_numbers):
+def guess_header_positions(table, rubbishRows, rubbishCols):
+	interpretations = [] # col classification
+	for i, col in enumerate(table):
+		if not (i in rubbishCols):
+			classes = []
+			for j, cell in enumerate(col):
+				if not (j in rubbishRows):
+					classes.append(rubbish(cell))
+			counts = np.bincount(classes)
+			if (len(counts))> 1:
+				interpretations.append(np.argmax(counts[1:])+1)
+			else:
+				interpretations.append(0)
+		else:
+			interpretations.append(0)
+	headers = determine_headers(table, interpretations)
+	return headers
+
+	# print(table['cols'][0])
+	# # TODO create classificaton matrix by calling classifyLine on all non-rubish rows
+	# transpose = [list(i) for i in zip(*table['cols'])]
+	# matrix = []
+	# for row in transpose:
+	# 	classification = classifyLine(row)
+	# 	matrix.append(classification)
+	# # TODO call compareClassificationLines on matrix
+	# headers = determine_headers(matrix, table['row_indices'])
+	# result = dict()
+	# for elem in headers:
+	# 	result[elem] = transpose[headers[elem]]
+	# return result
+	# for i, row in enumerate(transpose):
+	# 	containNumber = False
+	# 	for j in row:
+	# 		if (j != '') and number(j):
+	# 			containNumber = True
+	# 			break
+	# 	if not containNumber:
+	# 		result[i] = row
+	# # print(result)
+	# return result	
+
+def detectRubbish(table):
+	rubbishRows = set()
+	rubbishCols = set()
+	# row-wise representation
+	transpose = [list(i) for i in zip(*table)]
+
+	# delete all rows that contain rubish
+	rubbishRates = determineRubbishColumnRates(table)
+	rubbishRows = set()
+	for i, row in enumerate(transpose):
+		rowClassification = classifyLine(row)
+		counts = np.bincount(rowClassification)
+		unvalid = False
+		if counts[Rubbish.UNVALID] > (len(row) / 2):
+			for j, elem in enumerate(row):
+				if (rowClassification[j] == Rubbish.UNVALID) and (rubbishRates[j] < 0.5): # TODO replace 0.5 with meridian value
+					unvalid = True
+		if unvalid:
+			rubbishRows.add(i)
+	# remove rubbish rows -> new Transpose
+	newTranspose = {'rows': [], 'indices': []}
+	for i in range(len(transpose)):
+		if not (i in rubbishRows):
+			newTranspose['rows'].append(transpose[i])
+			newTranspose['indices'].append(i)
+	# remove rubbish cols
+	newTable = [list(i) for i in zip(*newTranspose['rows'])]
+	cleanNewTable = {'cols': [], 'col_indices': [], 'row_indices': newTranspose['indices']}
+	for i, col in enumerate(newTable):
+		classification = classifyLine(col)
+		# print(np.argmax(np.bincount(classification)))
+		if np.argmax(np.bincount(classification)) == Rubbish.UNVALID:
+			rubbishCols.add(i)
+	return rubbishRows, rubbishCols
+
+def classifyLine(line):
+	result = []
+	for i, elem in enumerate(line):
+		result.append(rubbish(elem))
+	return result
+
+def determine_headers_old(matrix, indices):
+	# determine classification for columns -> classes
+	counts = []
+	for i in range(len(matrix[0])):
+		counts.append(dict({0: 0}))
+	for row in matrix:
+		for i, elem in enumerate(row):
+			if elem != Rubbish.UNVALID:
+				if elem in counts[i]:
+					counts[i][elem] += 1
+				else:
+					counts[i][elem] = 1
+	classes = []
+	for count in counts:
+		classes.append(max(count, key=lambda x: count.get(x)))
+
+	headers = dict()
+	print(matrix[0])
+	for i in range(len(matrix)):
+		count = 0
+		for j in range(len(matrix[0])):
+			if (matrix[i][j] != Rubbish.UNVALID) and (matrix[i][j] != classes[j]):
+				count += 1
+		# counts.append(count)
+		if count > 1:
+			headers[indices[i]] = i
+		else:
+			if (count > 0) and (((indices[i] / indices[-1]) > 0.9) or ((indices[i] / indices[-1]) < 0.1)):
+				print(indices[i])
+				headers[indices[i]] = i
+	return headers
+
+def determine_headers(table, classes):
+	# print(classes)
 	result = dict()
-	if has_numbers:
-		transpose = [list(i) for i in zip(*table)]
-		for i, row in enumerate(transpose):
-			containNumber = False
-			for j in row:
-				if (j != '') and number(j):
-					containNumber = True
-					break
-			if not containNumber:
+	has_numbers = Rubbish.NUMBER in classes
+	transpose = [list(i) for i in zip(*table)]
+	for i, row in enumerate(transpose):
+		count = 0
+		others = 0
+		non_unvalid = False
+		for j, cell in enumerate(row):
+			if classes[j] != 0:
+				cl = rubbish(cell)
+				if cl != Rubbish.UNVALID:
+					non_unvalid = True
+				if classes[j] != cl:
+					if (classes[j] == Rubbish.NUMBER) and (cell != ''):
+						count += 2
+					else:
+						if (cell == ''):
+							count += 0.2
+							others += 0.8
+					if (cl == Rubbish.GEO) and (classes[j] == Rubbish.VALID):
+						count += 0
+					if (cl == Rubbish.UNVALID) and (not has_numbers):
+						count += 0.4
+				else:
+					others +=1
+		if non_unvalid:
+			if count > 2:
 				result[i] = row
+				# print(i, [(x,rubbish(x)) for x in row])
+			else:
+				if (count == 2) and (others > 0) and ((i / len(transpose)) > 0.9 or ((i / len(transpose)) < 0.1)):
+					result[i] = row
+					# print(i, [(x,rubbish(x)) for x in row])
 	return result
 
+def determineRubbishColumnRates(table):
+	result = []
+
+	for col in table:
+		rubishCount = 0
+		for elem in col:
+			if rubbish(elem) == Rubbish.UNVALID:
+				rubishCount += 1
+		result.append(rubishCount / len(col))
+	return result
+
+def main(argc, argv):
+	reader = TableReader(argv[1])
+	table = reader.getNextTable()
+	while (table):
+		line_count = reader.getLineCount()
+		if line_count == int(argv[2]):
+			print('get here')
+			table['relation']
+			print(process(table['relation']))
+			break
+		table = reader.getNextTable()
+
+if __name__ == "__main__":
+	main(len(sys.argv), sys.argv)
