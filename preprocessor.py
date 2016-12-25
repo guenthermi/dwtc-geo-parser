@@ -109,30 +109,6 @@ def guess_header_positions(table, rubbishRows, rubbishCols):
 	headers = determine_headers(table, interpretations)
 	return headers
 
-	# print(table['cols'][0])
-	# # TODO create classificaton matrix by calling classifyLine on all non-rubish rows
-	# transpose = [list(i) for i in zip(*table['cols'])]
-	# matrix = []
-	# for row in transpose:
-	# 	classification = classifyLine(row)
-	# 	matrix.append(classification)
-	# # TODO call compareClassificationLines on matrix
-	# headers = determine_headers(matrix, table['row_indices'])
-	# result = dict()
-	# for elem in headers:
-	# 	result[elem] = transpose[headers[elem]]
-	# return result
-	# for i, row in enumerate(transpose):
-	# 	containNumber = False
-	# 	for j in row:
-	# 		if (j != '') and number(j):
-	# 			containNumber = True
-	# 			break
-	# 	if not containNumber:
-	# 		result[i] = row
-	# # print(result)
-	# return result	
-
 def detectRubbish(table):
 	rubbishRows = set()
 	rubbishCols = set()
@@ -173,38 +149,6 @@ def classifyLine(line):
 	for i, elem in enumerate(line):
 		result.append(rubbish(elem))
 	return result
-
-def determine_headers_old(matrix, indices):
-	# determine classification for columns -> classes
-	counts = []
-	for i in range(len(matrix[0])):
-		counts.append(dict({0: 0}))
-	for row in matrix:
-		for i, elem in enumerate(row):
-			if elem != Rubbish.UNVALID:
-				if elem in counts[i]:
-					counts[i][elem] += 1
-				else:
-					counts[i][elem] = 1
-	classes = []
-	for count in counts:
-		classes.append(max(count, key=lambda x: count.get(x)))
-
-	headers = dict()
-	print(matrix[0])
-	for i in range(len(matrix)):
-		count = 0
-		for j in range(len(matrix[0])):
-			if (matrix[i][j] != Rubbish.UNVALID) and (matrix[i][j] != classes[j]):
-				count += 1
-		# counts.append(count)
-		if count > 1:
-			headers[indices[i]] = i
-		else:
-			if (count > 0) and (((indices[i] / indices[-1]) > 0.9) or ((indices[i] / indices[-1]) < 0.1)):
-				print(indices[i])
-				headers[indices[i]] = i
-	return headers
 
 def determine_headers(table, classes):
 	# print(classes)
