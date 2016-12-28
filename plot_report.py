@@ -14,31 +14,46 @@ TEMPLATE_TABLE = 'evaluation/templates/table_tpl.html'
 AUTHOR = 'AUTOGENERATE DOCUMENT'
 
 
-def processResult(cur, result):
+def process_result(cur, result):
 	query = 'SELECT * FROM Results'
 	cur.execute(query)
 	rows = cur.fetchall()
 	return
 
-def generateTableHTMLCode(id, table, url, geoColumns, headerRows):
-	# TODO read template
+def generate_table_HTML(id, table, url, quality, geo_columns, header_rows, rubbish_rows):
+	# read template
 	tpl = read_tpl(TEMPLATE_TABLE)
-	table_name = 'TABLE ' + str(id)
+
 	html_url = '<a href="' + cgi.escape(url, quote=True) + '">' + cgi.escape(url) + '</a>'
+	table_name = 'TABLE ' + str(id)
+	if not quality:
+		table_name += ' - (<span class="important">Rejected for classification</span>)'
 
 	rows = ''
 	transpose = [list(i) for i in zip(*table)]
 	for i, row in enumerate(transpose):
-		if i in headerRows:
-			rows += '<tr class="header-row">'
+		css_classes = []
+		if i in rubbish_rows:
+			css_classes.append('rubbish-row')
+		if i in header_rows:
+			css_classes.append('header-row')
+		if css_classes:
+			rows += '<tr class="' + ', '.join(css_classes) + '">'
 		else:
 			rows += '<tr>'
 		for j, x in enumerate(row):
-			if j in geoColumns:
+			if j in geo_columns:
 				rows += '<td class="geo-entity">' + cgi.escape(x) + '</td>'
 			else:
 				rows += '<td>' + cgi.escape(x) + '</td>'
 		rows += '</tr>\n'
+	rows += '<tr>'
+	for i, col in enumerate(table):
+		if i in geo_columns:
+			rows += '<td>' + '</br>'.join([str(x[0]) + '; ' + str(x[1]) for x in geo_columns[i]]) + '</td>'
+		else:
+			rows += '<td></td>'
+	rows += '</tr>'
 
 	for i in range(len(tpl[1])):
 		if tpl[1][i] == ' TABLE_NAME ':
@@ -48,43 +63,52 @@ def generateTableHTMLCode(id, table, url, geoColumns, headerRows):
 		if tpl[1][i] == ' URL ':
 			tpl[1][i] = html_url
 
-	return buildFromTpl(tpl)
+	return build_from_tpl(tpl)
 
-def generateHTMLDocument(tableCodes, dest):
+def generate_HTML_document(table_codes, dest):
 	# read template
 	tpl = read_tpl(TEMPLATE_REPORT)
 	# insert content into template
-	print(tpl)
 	for i in range(len(tpl[1])):
 		if tpl[1][i] == ' AUTHOR ':
 			tpl[1][i] = AUTHOR
 		if tpl[1][i] == ' CONTENT ':
-			tpl[1][i] = ''.join(tableCodes)
+			tpl[1][i] = ''.join(table_codes)
 	htmlFile = open(dest, 'w')
-	htmlFile.write(buildFromTpl(tpl))
+	htmlFile.write(build_from_tpl(tpl))
 	htmlFile.close()
 	return
 
-def processOutput(cur, dest):
+def process_output(cur, dest):
 	# query to get the table
-	queryGetTables = 'SELECT Results.ResultId, Results.Url, Results.DWTC_Table FROM Results'
+	query_get_tables = 'SELECT Results.ResultId, Results.Url, Results.DWTC_Table, Results.Quality FROM Results'
 	# query to get geo columns
-	queryGetGeoColumns = 'SELECT GeoColumns.ColumnId FROM Results INNER JOIN GeoColumns  ON Results.ResultId = GeoColumns.ResultId WHERE Results.ResultId = ?'
+	query_get_geo_columns = 'SELECT GeoColumns.Id, GeoColumns.ColumnId FROM Results INNER JOIN GeoColumns  ON Results.ResultId = GeoColumns.ResultId WHERE Results.ResultId = ?'
+	# query to get interpretation for geo column
+	query_get_interpretations = 'SELECT Interpretations.classification, Interpretations.Info FROM GeoColumns INNER JOIN Interpretations  ON GeoColumns.Id = Interpretations.ColumnId WHERE GeoColumns.Id = ?'
 	# query to get headers
-	queryGetHeaderRows = 'SELECT Headers.RowNumber FROM Results INNER JOIN Headers ON Results.ResultId = Headers.ResultId WHERE Results.ResultId = ?'
+	query_get_header_rows = 'SELECT Headers.RowNumber FROM Results INNER JOIN Headers ON Results.ResultId = Headers.ResultId WHERE Results.ResultId = ?'
+	# query to get rubbishRows
+	query_get_rubbish_rows = 'SELECT rubbishRows.RowNumber FROM Results INNER JOIN rubbishRows ON Results.ResultId = rubbishRows.ResultId WHERE Results.ResultId = ?'
 
-	cur.execute(queryGetTables)
+	cur.execute(query_get_tables)
 	tables = cur.fetchall()
 
 	HTMLCodes = []
 	for i, table in enumerate(tables):
-		id, url, relations = table
+		id, url, relations, quality = table
 		relations = ast.literal_eval(relations)
-		cur.execute(queryGetGeoColumns, (str(id),))
-		geoCols = [x[0] for x in cur.fetchall()]
-		cur.execute(queryGetHeaderRows, (str(id),))
-		headerRows = [x[0] for x in cur.fetchall()]
-		HTMLCodes.append(generateTableHTMLCode(id, relations, url, geoCols, headerRows))
+		cur.execute(query_get_geo_columns, (str(id),))
+		geo_cols_without_interpretations = cur.fetchall()
+		geo_cols_with_interpretations = dict()
+		for col in geo_cols_without_interpretations:
+			cur.execute(query_get_interpretations, (str(col[0]),))
+			geo_cols_with_interpretations[col[1]] = cur.fetchall()
+		cur.execute(query_get_header_rows, (str(id),))
+		header_rows = [x[0] for x in cur.fetchall()]
+		cur.execute(query_get_rubbish_rows, (str(id),))
+		rubbish_rows = [x[0] for x in cur.fetchall()]
+		HTMLCodes.append(generate_table_HTML(id, relations, url, int(quality), geo_cols_with_interpretations, header_rows, rubbish_rows))
 
 	return HTMLCodes
 
@@ -100,7 +124,7 @@ def read_tpl(filename):
 			result[1].append(part[1])
 	return result
 
-def buildFromTpl(tpl):
+def build_from_tpl(tpl):
 	return ''.join([x + tpl[1][i] for i, x in enumerate(tpl[0][:-1])]) + tpl[0][-1]
 
 def main(argc, argv):
@@ -112,9 +136,11 @@ def main(argc, argv):
 
 		con = sqlite3.connect(db_path)
 		cur = con.cursor()
-
-		tableHTMLCodes = processOutput(cur, dest)
-		generateHTMLDocument(tableHTMLCodes, dest)
+		print('Read data...')
+		table_HTML_codes = process_output(cur, dest)
+		print('Generate html...')
+		generate_HTML_document(table_HTML_codes, dest)
+		print('Succeeded!')
 
 
 if __name__ == "__main__":

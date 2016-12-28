@@ -11,25 +11,23 @@ RE_NO_NUMBER = re.compile('[a-z,A-Z]')
 
 RE_ENGLISH = re.compile('^[a-z,A-Z,\-,\s,\'.]*$')
 
-RE_ADDRESS = re.compile('^(([a-z,A-Z,\']*|[0-9]*)(\s|$)+)*$')
-
 RE_GEO_COMLETE = re.compile('^(([a-z,A-Z,\-,\'.\,]*|[0-9]*)(\s|$)+)*$')
 
 RE_NO_RUBBISH = re.compile('.*[a-z,A-Z,0-9].*')
 
-class Rubbish:
+class PreClass:
 	UNVALID, VALID, NUMBER, GEO = range(4) 
 
-def rubbish(elem):
+def pre_classify(elem):
 	if elem.isdigit():
-		return Rubbish.NUMBER
+		return PreClass.NUMBER
 	if (len(elem) < 2) or (not no_rubbish(elem)):
-		return Rubbish.UNVALID
+		return PreClass.UNVALID
 	if number(elem):
-		return Rubbish.NUMBER
+		return PreClass.NUMBER
 	if geo(elem):
-		return Rubbish.GEO
-	return Rubbish.VALID
+		return PreClass.GEO
+	return PreClass.VALID
 
 def no_rubbish(elem):
 	if RE_NO_RUBBISH:
@@ -47,11 +45,6 @@ def english_phrase(elem):
 		return True
 	return False
 
-def address(elem):
-	if RE_ADDRESS.match(elem):
-		return True
-	return False
-
 def geo(elem):
 	if RE_GEO_COMLETE.match(elem):
 		return True
@@ -62,43 +55,66 @@ def process(table):
 	result = {'columns': [], 'column_indices':[]}
 
 	# TODO determine table direction
+	quality = weight_quality(table)
+	if not quality:
+		return None, None, None
 
 	# detect rubbish rows and columns
-	rubbishRows, rubbishCols = detectRubbish(table)
+	rubbish_rows, rubbish_cols = detect_rubbish(table)
 
 	# determine header, rubish rows
-	headers = guess_header_positions(table, rubbishRows, rubbishCols)
-	# print(headers)
+	headers = guess_header_positions(table, rubbish_rows, rubbish_cols)
 
 	# remove rubbish rows and headers
-	result = cleanup_table(table, rubbishRows, rubbishCols, headers)
+	result = cleanup_table(table, rubbish_rows, rubbish_cols, headers)
 
-	return result, headers
+	return result, headers, rubbish_rows
 
-def cleanup_table(table, rubbishRows, rubbishCols, headers):
+def weight_quality(table):
+	return detect_table_direction(table)
+
+def detect_table_direction(table):
+	direction = 0
+	horizontal_count = 0
+	vertical_count = 0
+	for col in table:
+		classes = []
+		for cell in col:
+			classes.append(pre_classify(cell))
+		horizontal_count += max(np.bincount(classes))
+	transpose = [list(i) for i in zip(*table)]
+	for row in transpose:
+		classes = []
+		for cell in row:
+			classes.append(pre_classify(cell))
+		vertical_count += max(np.bincount(classes))
+	return (horizontal_count > vertical_count)
+
+def cleanup_table(table, rubbish_rows, rubbish_cols, headers):
 	result = {'columns': [], 'column_indices': []}
 
 	for i, col in enumerate(table):
 		newcol =  ([],[])
 		count = 0
-		for j, cell in enumerate(col):
-			if (not (j in rubbishRows)) and (not (j in headers)):
-				if rubbish(cell) == Rubbish.GEO:
-					newcol[0].append(cell)
-					newcol[1].append(j)
-		if len(set(newcol[0])) > 1:
-			result['columns'].append(newcol)
-			result['column_indices'].append(i)
+		if not (i in rubbish_cols):
+			for j, cell in enumerate(col):
+				if (not (j in rubbish_rows)) and (not (j in headers)):
+					if pre_classify(cell) == PreClass.GEO:
+						newcol[0].append(cell)
+						newcol[1].append(j)
+			if len(set(newcol[0])) > 1:
+				result['columns'].append(newcol)
+				result['column_indices'].append(i)
 	return result
 
-def guess_header_positions(table, rubbishRows, rubbishCols):
+def guess_header_positions(table, rubbish_rows, rubbish_cols):
 	interpretations = [] # col classification
 	for i, col in enumerate(table):
-		if not (i in rubbishCols):
+		if not (i in rubbish_cols):
 			classes = []
 			for j, cell in enumerate(col):
-				if not (j in rubbishRows):
-					classes.append(rubbish(cell))
+				if not (j in rubbish_rows):
+					classes.append(pre_classify(cell))
 			counts = np.bincount(classes)
 			if (len(counts))> 1:
 				interpretations.append(np.argmax(counts[1:])+1)
@@ -109,51 +125,48 @@ def guess_header_positions(table, rubbishRows, rubbishCols):
 	headers = determine_headers(table, interpretations)
 	return headers
 
-def detectRubbish(table):
-	rubbishRows = set()
-	rubbishCols = set()
+def detect_rubbish(table):
+	rubbish_rows = set()
+	rubbish_cols = set()
 	# row-wise representation
 	transpose = [list(i) for i in zip(*table)]
 
 	# delete all rows that contain rubish
-	rubbishRates = determineRubbishColumnRates(table)
-	rubbishRows = set()
+	rubbish_rates = determine_rubbish_column_rates(table)
+	rubbish_rows = set()
 	for i, row in enumerate(transpose):
-		rowClassification = classifyLine(row)
-		counts = np.bincount(rowClassification)
+		row_classification = classify_line(row)
+		counts = np.bincount(row_classification)
 		unvalid = False
-		if counts[Rubbish.UNVALID] > (len(row) / 2):
+		if counts[PreClass.UNVALID] > (len(row) / 2):
 			for j, elem in enumerate(row):
-				if (rowClassification[j] == Rubbish.UNVALID) and (rubbishRates[j] < 0.5): # TODO replace 0.5 with meridian value
+				if (row_classification[j] == PreClass.UNVALID) and (rubbish_rates[j] < 0.5): # TODO replace 0.5 with meridian value
 					unvalid = True
 		if unvalid:
-			rubbishRows.add(i)
-	# remove rubbish rows -> new Transpose
-	newTranspose = {'rows': [], 'indices': []}
+			rubbish_rows.add(i)
+	# remove rubbish rows -> new_transpose
+	new_transpose = {'rows': [], 'indices': []}
 	for i in range(len(transpose)):
-		if not (i in rubbishRows):
-			newTranspose['rows'].append(transpose[i])
-			newTranspose['indices'].append(i)
+		if not (i in rubbish_rows):
+			new_transpose['rows'].append(transpose[i])
+			new_transpose['indices'].append(i)
 	# remove rubbish cols
-	newTable = [list(i) for i in zip(*newTranspose['rows'])]
-	cleanNewTable = {'cols': [], 'col_indices': [], 'row_indices': newTranspose['indices']}
-	for i, col in enumerate(newTable):
-		classification = classifyLine(col)
-		# print(np.argmax(np.bincount(classification)))
-		if np.argmax(np.bincount(classification)) == Rubbish.UNVALID:
-			rubbishCols.add(i)
-	return rubbishRows, rubbishCols
+	new_table = [list(i) for i in zip(*new_transpose['rows'])]
+	for i, col in enumerate(new_table):
+		classification = classify_line(col)
+		if np.argmax(np.bincount(classification)) == PreClass.UNVALID:
+			rubbish_cols.add(i)
+	return rubbish_rows, rubbish_cols
 
-def classifyLine(line):
+def classify_line(line):
 	result = []
 	for i, elem in enumerate(line):
-		result.append(rubbish(elem))
+		result.append(pre_classify(elem))
 	return result
 
 def determine_headers(table, classes):
-	# print(classes)
 	result = dict()
-	has_numbers = Rubbish.NUMBER in classes
+	has_numbers = PreClass.NUMBER in classes
 	transpose = [list(i) for i in zip(*table)]
 	for i, row in enumerate(transpose):
 		count = 0
@@ -161,46 +174,45 @@ def determine_headers(table, classes):
 		non_unvalid = False
 		for j, cell in enumerate(row):
 			if classes[j] != 0:
-				cl = rubbish(cell)
-				if cl != Rubbish.UNVALID:
+				cl = pre_classify(cell)
+				if cl != PreClass.UNVALID:
 					non_unvalid = True
 				if classes[j] != cl:
-					if (classes[j] == Rubbish.NUMBER) and (cell != ''):
+					if (classes[j] == PreClass.NUMBER) and (cell != ''):
 						count += 2
 					else:
 						if (cell == ''):
 							count += 0.2
 							others += 0.8
-					if (cl == Rubbish.GEO) and (classes[j] == Rubbish.VALID):
+					if (cl == PreClass.GEO) and (classes[j] == PreClass.VALID):
 						count += 0
-					if (cl == Rubbish.UNVALID) and (not has_numbers):
+					if (cl == PreClass.UNVALID) and (not has_numbers):
 						count += 0.4
 				else:
 					others +=1
 		if non_unvalid:
 			if count > 2:
 				result[i] = row
-				# print(i, [(x,rubbish(x)) for x in row])
 			else:
 				if (count == 2) and (others > 0) and ((i / len(transpose)) > 0.9 or ((i / len(transpose)) < 0.1)):
 					result[i] = row
-					# print(i, [(x,rubbish(x)) for x in row])
+
 	return result
 
-def determineRubbishColumnRates(table):
+def determine_rubbish_column_rates(table):
 	result = []
 
 	for col in table:
 		rubishCount = 0
 		for elem in col:
-			if rubbish(elem) == Rubbish.UNVALID:
+			if pre_classify(elem) == PreClass.UNVALID:
 				rubishCount += 1
 		result.append(rubishCount / len(col))
 	return result
 
 def main(argc, argv):
 	reader = TableReader(argv[1])
-	table = reader.getNextTable()
+	table = reader.get_next_table()
 	while (table):
 		line_count = reader.getLineCount()
 		if line_count == int(argv[2]):
@@ -208,7 +220,7 @@ def main(argc, argv):
 			table['relation']
 			print(process(table['relation']))
 			break
-		table = reader.getNextTable()
+		table = reader.get_next_table()
 
 if __name__ == "__main__":
 	main(len(sys.argv), sys.argv)

@@ -10,9 +10,9 @@ class CoverageTree:
 	def __init__(self, config):
 		f = open(config, 'r')
 		data = json.loads(''.join(f.readlines()))
-		self.origin = self._loadTree(data["0"], data)
+		self.origin = self._load_tree(data["0"], data)
 
-	def _loadTree(self, node, data):
+	def _load_tree(self, node, data):
 		count = 0
 		result = dict()
 		for key in node:
@@ -21,7 +21,7 @@ class CoverageTree:
 				for id in node["successors"]:
 					count += 1
 					if count < MAX_ITERATION:
-						succs.append(self._loadTree(data[id], data))
+						succs.append(self._load_tree(data[id], data))
 					else:
 						print('ERROR: Maximal number of nodes reached. Either '
 							+ 'your graph has cycles or there are simply to '
@@ -31,14 +31,14 @@ class CoverageTree:
 				result[key] = node[key]
 		return result
 
-	def getOrigin(self):
+	def get_origin(self):
 		return self.origin
 
 
 def main(argc, argv):
 	if argc > 1:
 		tree = CoverageTree(argv[1])
-		print(tree.getOrigin())
+		print(tree.get_origin())
 	else:
 		print('config file missing')
 

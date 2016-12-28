@@ -20,77 +20,77 @@ class GazetteerResult:
 	def __init__(self):
 		self.result = dict()
 	
-	def addResult(self, name, featureClass, featureCode, countryCode, timezone, population):
+	def add_result(self, name, featureClass, featureCode, countryCode, timezone, population):
 		if name in self.result:
 			self.result[name].add((featureClass, featureCode, countryCode, timezone, population))
 		else:
 			self.result[name] = set({(featureClass, featureCode, countryCode, timezone, population)})
 
-	def getResult(self):
+	def get_result(self):
 		return self.result
 
-	def countFeatureValues(self, precondition, feature, featureValues, type):
+	def count_feature_values(self, precondition, feature, featureValues, type):
 		if type == 'empty':
 			return len(self.result), 'single'
 		if type == 'all':
-			return self._countFeatureValuesAll(precondition, feature), 'complex'
+			return self._count_feature_values_all(precondition, feature), 'complex'
 		if type == 'specific':
-			return self._countFeatureValuesSpecific(precondition, feature, featureValues), 'complex'
+			return self._count_feature_values_specific(precondition, feature, featureValues), 'complex'
 		if type == 'minimum':
-			return self._countFeatureValuesMinimum(precondition, feature, featureValues), 'single'
+			return self._count_feature_values_minimum(precondition, feature, featureValues), 'single'
 
-	def _countFeatureValuesAll(self, precondition, feature):
+	def _count_feature_values_all(self, precondition, feature):
 		counts = dict();
 		for name in self.result:
-			posibilities = self._hasFeatures(name, precondition)
-			valueSet = set()
+			posibilities = self._has_features(name, precondition)
+			value_set = set()
 			for entry in posibilities:
-				valueSet.add(entry[GazetteerResult.FEATURE_INDICES[feature]])
-			for value in valueSet:	
+				value_set.add(entry[GazetteerResult.FEATURE_INDICES[feature]])
+			for value in value_set:	
 				if value in counts:
 					counts[value] += 1
 				else:
 					counts[value] = 1
 		return counts
 
-	def _countFeatureValuesSpecific(self, precondition, feature, legalValues):
+	def _count_feature_values_specific(self, precondition, feature, legalValues):
 		counts = dict();
 		for name in self.result:
-			posibilities = self._hasFeatures(name, precondition)
-			valueSet = set()
+			posibilities = self._has_features(name, precondition)
+			value_set = set()
 			for entry in posibilities:
 				if entry[GazetteerResult.FEATURE_INDICES[feature]] in legalValues:
-					valueSet.add(entry[GazetteerResult.FEATURE_INDICES[feature]])
-			for value in valueSet:	
+					value_set.add(entry[GazetteerResult.FEATURE_INDICES[feature]])
+			for value in value_set:	
 				if value in counts:
 					counts[value] += 1
 				else:
 					counts[value] = 1
 		return counts		
 
-	def _countFeatureValuesMinimum(self, precondition, feature, minimum):
+	def _count_feature_values_minimum(self, precondition, feature, minimum):
 		count = 0
 		for name in self.result:
-			posibilities = self._hasFeatures(name, precondition)
-			validExists = False
+			posibilities = self._has_features(name, precondition)
+			valid_exists = False
 			for entry in posibilities:
 				if entry[GazetteerResult.FEATURE_INDICES[feature]] > minimum:
-					validExists = True
-			if validExists:
+					valid_exists = True
+			if valid_exists:
 				count += 1
 		return count
 
-	def _hasFeatures(self, name, features):
+	def _has_features(self, name, features):
 		""" Returns possible geo entities for a given name that have all given features"""
 		posibilities = set()
-		featureSet = self.result[name]
-		for featureTuple in featureSet:
+		feature_set = self.result[name]
+		for feature_tuple in feature_set:
 			valid = True
-			for featureName in features:
-				if features[featureName] != featureTuple[GazetteerResult.FEATURE_INDICES[featureName]]:
+			for feature_name in features:
+				if features[feature_name] != feature_tuple[GazetteerResult.FEATURE_INDICES[feature_name]]:
 					valid = False
 			if valid:
-				posibilities.add(featureTuple)
+				posibilities.add(feature_tuple)
 		return posibilities
 
 
@@ -101,21 +101,21 @@ class Gazetteer:
 		self.cur = self.con.cursor()
 		self.r = redis.StrictRedis()
 
-	def lookupName(self, name, gResult):
+	def lookup_name(self, name, g_result):
 		self.cur.execute("SELECT GeoEntities.GeonameId, GeoEntities.name, GeoEntities.FeatureClass, GeoEntities.FeatureCode, GeoEntities.CountryCode, GeoEntities.Timezone, GeoEntities.Population FROM Aliases INNER JOIN GeoEntities ON Aliases.GeonameId=GeoEntities.GeonameId WHERE AlternateName = '" + name.replace('’','’’').replace("'","''") + "'") # inner join with GeoEntities
 		rows = self.cur.fetchall()
 
 		# check if response is empty
 		if rows == []:
-			return gResult
+			return g_result
 		
 		# add to result
 		for row in rows:
-			gResult.addResult(name, row[2], row[3], row[4], row[5], row[6])
+			g_result.add_result(name, row[2], row[3], row[4], row[5], row[6])
 
 		return
 
-	def lookupNameRedis(self, name, gResult):
+	def lookup_name_redis(self, name, g_result):
 		ids = self.r.get(name)
 		if ids:
 			ids = ids.split(b',')
@@ -125,19 +125,19 @@ class Gazetteer:
 					row[3] = int(row[3])
 				else:
 					row[3] = 0
-				gResult.addResult(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[4].decode('utf-8'), row[3])
+				g_result.add_result(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[4].decode('utf-8'), row[3])
 		return
 
 
-	def lookupColumn(self, column):
+	def lookup_column(self, column):
 		""" Returns the GazetteerResult for a column of names and the general geo entities coverage """
 		result = GazetteerResult()
 		for entry in column:
-			self.lookupName(entry, result)
-		return result, len(result.getResult())
+			self.lookup_name(entry, result)
+		return result, len(result.get_result())
 
-	def lookupColumnFast(self, column):
-		gResult = GazetteerResult()
+	def lookup_column_fast(self, column):
+		g_result = GazetteerResult()
 		ids = dict()
 		pipe = self.r.pipeline()
 		for entry in column:
@@ -146,26 +146,26 @@ class Gazetteer:
 		for i, entry in enumerate(column):
 			ids[entry] = response[i]
 		for name in ids:
-			idSet = ids[name]
-			if idSet:
-				idSet = idSet.split(b',')
-				for id in idSet:
+			id_set = ids[name]
+			if id_set:
+				id_set = id_set.split(b',')
+				for id in id_set:
 					row = self.r.get(id).split(b'\t')
 					if row[3]:
 						row[3] = int(row[3])
 					else:
 						row[3] = 0
-					gResult.addResult(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[4].decode('utf-8'), row[3])
-		return gResult, len(gResult.getResult())
+					g_result.add_result(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[4].decode('utf-8'), row[3])
+		return g_result, len(g_result.get_result())
 
 
 def main(argc, argv):
 	g = Gazetteer('index.db')
-	res, cov = g.lookupColumnFast(['Luga', 'Paris', 'Berlin', 'Dresden', 'Bautzen', 'Leipzig'])
+	res, cov = g.lookup_column_fast(['Luga', 'Paris', 'Berlin', 'Dresden', 'Bautzen', 'Leipzig'])
 	print('Coverage: ', cov)
-	print('Result:', res.getResult())
-	print(res.countFeatureValues({}, 'featureClass'));
-	print(res.countFeatureValues({'featureClass': 'R'}, 'countryCode'));
+	print('Result:', res.get_result())
+	print(res.count_feature_values({}, 'featureClass'));
+	print(res.count_feature_values({'featureClass': 'R'}, 'countryCode'));
 
 if __name__ == "__main__":
 	main(len(sys.argv), sys.argv)
