@@ -41,7 +41,11 @@ class DatabaseOutput:
 		for column in geo_columns:
 			self.cur.execute('INSERT INTO GeoColumns VALUES (null, ?, ?)', (str(result_id), column))
 			column_id = self.cur.lastrowid
-			for (name, info) in geo_columns[column]:
+			for (name, max_feature, cov) in geo_columns[column]:
+				info = ''
+				if max_feature:
+					info += str(max_feature) + ' '
+				info += 'cov: ' + str(cov)
 				self.cur.execute('INSERT INTO Interpretations VALUES (null, ?, ?, ?)', (str(column_id), name, info))
 		for row_id in headers:
 			self.cur.execute('INSERT INTO Headers VALUES (null, ?, ?, ?)', (str(result_id), str(row_id), str(headers[row_id])))

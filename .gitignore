@@ -1,5 +1,6 @@
 old_redis_dumps/
 __pycache__/
+.idea/
 *.rdb
 *.gz
 *.db

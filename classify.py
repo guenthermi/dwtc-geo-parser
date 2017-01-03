@@ -12,8 +12,6 @@ import re
 
 HELP_TEXT = '\033[1mclassify.py\033[0m selector destination [dump]...'
 
-GEO_NAMES_LOCATION = 'allCountries.txt.gz'
-
 GAZETTEER_INDEX_LOCATION = 'index.db'
 
 COVERAGE_TREE_LOCATION = 'coverageTree.json'
@@ -39,7 +37,7 @@ def gazetteer_test(columns, gazetteer, tree):
 			max_number = node[2]
 			max_feature_count = 0
 			max_feature = ''
-			info_string = ''
+			# info_string = ''
 			counts_response, value_type = res.count_feature_values(node[0], node[1]['feature'], node[1]['featureValues'], node[1]['featureValuesType'])
 			if value_type == 'single':
 				max_feature_count = counts_response
@@ -47,15 +45,15 @@ def gazetteer_test(columns, gazetteer, tree):
 				if counts_response:
 					max_feature = max(counts_response, key=counts_response.get)
 					max_feature_count = counts_response[max_feature]
-					info_string = str(max_feature) + ' '
+					# info_string = str(max_feature) + ' '
 			if (max_feature_count / max_number) >= node[1]['lower_bound']:
-				info_string += 'cov: ' + str(max_feature_count / max_number)
+				# info_string += 'cov: ' + str(max_feature_count / max_number)
 				if (len(node[1]['successors']) == 0):
 					index = columns['column_indices'][i]
 					if index in result:
-						result[index].append((node[1]['name'], info_string))
+						result[index].append((node[1]['name'], max_feature, max_feature_count / max_number))
 					else:
-						result[index] = [(node[1]['name'], info_string)]
+						result[index] = [(node[1]['name'], max_feature, max_feature_count / max_number)]
 				for new_node in node[1]['successors']:
 					precondition = node[0]
 					if node[1]['feature']:
@@ -70,6 +68,7 @@ def process_table(table, lookup, line_count, coverage_tree, out=False):
 		return dict(), [], [], 0
 	if len(res['columns']) > 0:
 		res = gazetteer_test(res, lookup, coverage_tree)
+		print(res)
 		return res, headers, rubbish_rows, 1
 	return dict(), headers, rubbish_rows, 1
 
