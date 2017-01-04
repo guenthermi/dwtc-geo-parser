@@ -44,7 +44,7 @@ def readGeoNames(filename, r):
 			r.set(alias, ids)
 
 		# add content
-		content_line = splits[6] + b'\t' + splits[7] + b'\t' + splits[8] + b'\t' + splits[14] + b'\t' + splits[17] # timezone
+		content_line = splits[6] + b'\t' + splits[7] + b'\t' + splits[8] + b'\t' + splits[14] + b'\t' + splits[17]
 		r.set(splits[0], content_line)
 
 	print('All aliases are loaded.')

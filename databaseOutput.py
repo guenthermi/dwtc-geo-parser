@@ -23,7 +23,7 @@ class DatabaseOutput:
 			self.cur.execute("CREATE TABLE Results(ResultId INTEGER PRIMARY KEY, Url TEXT, Quality INT)")
 			self.cur.execute("CREATE TABLE DWTC(Id INTEGER, Row INTEGER, Col INTEGER, Cell TEXT, FOREIGN KEY(Id) REFERENCES Results(ResultId))")
 		self.cur.execute("CREATE TABLE GeoColumns(Id INTEGER PRIMARY KEY AUTOINCREMENT, ResultId INTEGER, ColumnId INT, FOREIGN KEY(ResultId) REFERENCES Results(ResultId))")
-		self.cur.execute("CREATE TABLE Interpretations(Id INTEGER PRIMARY KEY AUTOINCREMENT, ColumnId INTEGER, Classification TEXT, Info TEXT, FOREIGN KEY(ColumnId) REFERENCES GeoColumns(Id))")
+		self.cur.execute("CREATE TABLE Interpretations(Id INTEGER PRIMARY KEY AUTOINCREMENT, ColumnId INTEGER, Classification TEXT, Best INTEGER, Info TEXT, FOREIGN KEY(ColumnId) REFERENCES GeoColumns(Id))")
 		self.cur.execute("CREATE TABLE Headers(Id INTEGER PRIMARY KEY AUTOINCREMENT, ResultId INTEGER, RowNumber INT, Header TEXT, FOREIGN KEY(ResultId) REFERENCES Results(ResultId))")
 		self.cur.execute("CREATE TABLE RubbishRows(Id INTEGER PRIMARY KEY AUTOINCREMENT, ResultId INTEGER, RowNumber INT, FOREIGN KEY(ResultId) REFERENCES Results(ResultId))")
 		self.con.commit()
@@ -41,8 +41,12 @@ class DatabaseOutput:
 		for column in geo_columns:
 			self.cur.execute('INSERT INTO GeoColumns VALUES (null, ?, ?)', (str(result_id), column))
 			column_id = self.cur.lastrowid
-			for (name, info) in geo_columns[column]:
-				self.cur.execute('INSERT INTO Interpretations VALUES (null, ?, ?, ?)', (str(column_id), name, info))
+			for (name, max_feature, cov, best) in geo_columns[column]:
+				info = ''
+				if max_feature:
+					info += str(max_feature) + ' '
+				info += 'cov: ' + str(cov)
+				self.cur.execute('INSERT INTO Interpretations VALUES (null, ?, ?, ?, ?)', (str(column_id), name, str(int(best)), info))
 		for row_id in headers:
 			self.cur.execute('INSERT INTO Headers VALUES (null, ?, ?, ?)', (str(result_id), str(row_id), str(headers[row_id])))
 		for row_id in rubbish_rows:

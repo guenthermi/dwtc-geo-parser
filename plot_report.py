@@ -50,7 +50,16 @@ def generate_table_HTML(id, table, url, quality, geo_columns, header_rows, rubbi
 	rows += '<tr>'
 	for i, col in enumerate(table):
 		if i in geo_columns:
-			rows += '<td>' + '</br>'.join([str(x[0]) + '; ' + str(x[1]) for x in geo_columns[i]]) + '</td>'
+			rows += '<td>'
+			for i, interpretation in enumerate(geo_columns[i]):
+				if i != 0:
+					rows += '</br>'
+				value = str(interpretation[0]) + '; ' + str(interpretation[2])
+				if interpretation[1]:
+					rows += '<b>' + value + '</b>'
+				else:
+					rows += value
+				interpretation[0]
 		else:
 			rows += '<td></td>'
 	rows += '</tr>'
@@ -85,7 +94,7 @@ def process_output(cur, dest):
 	# query to get geo columns
 	query_get_geo_columns = 'SELECT GeoColumns.Id, GeoColumns.ColumnId FROM Results INNER JOIN GeoColumns  ON Results.ResultId = GeoColumns.ResultId WHERE Results.ResultId = ?'
 	# query to get interpretation for geo column
-	query_get_interpretations = 'SELECT Interpretations.classification, Interpretations.Info FROM GeoColumns INNER JOIN Interpretations  ON GeoColumns.Id = Interpretations.ColumnId WHERE GeoColumns.Id = ?'
+	query_get_interpretations = 'SELECT Interpretations.classification, Interpretations.Best, Interpretations.Info FROM GeoColumns INNER JOIN Interpretations  ON GeoColumns.Id = Interpretations.ColumnId WHERE GeoColumns.Id = ?'
 	# query to get headers
 	query_get_header_rows = 'SELECT Headers.RowNumber FROM Results INNER JOIN Headers ON Results.ResultId = Headers.ResultId WHERE Results.ResultId = ?'
 	# query to get rubbishRows

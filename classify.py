@@ -3,6 +3,7 @@
 from reader import *
 from gazetteer import *
 from coverageScores import *
+from rating import *
 from databaseOutput import *
 import preprocessor as pre
 
@@ -12,11 +13,11 @@ import re
 
 HELP_TEXT = '\033[1mclassify.py\033[0m selector destination [dump]...'
 
-GEO_NAMES_LOCATION = 'allCountries.txt.gz'
-
 GAZETTEER_INDEX_LOCATION = 'index.db'
 
 COVERAGE_TREE_LOCATION = 'coverageTree.json'
+
+RATES_FILE_LOCATION = 'categoryCounts.json'
 
 DB_OUTPUT = 'output.db'
 
@@ -39,7 +40,7 @@ def gazetteer_test(columns, gazetteer, tree):
 			max_number = node[2]
 			max_feature_count = 0
 			max_feature = ''
-			info_string = ''
+			# info_string = ''
 			counts_response, value_type = res.count_feature_values(node[0], node[1]['feature'], node[1]['featureValues'], node[1]['featureValuesType'])
 			if value_type == 'single':
 				max_feature_count = counts_response
@@ -47,15 +48,15 @@ def gazetteer_test(columns, gazetteer, tree):
 				if counts_response:
 					max_feature = max(counts_response, key=counts_response.get)
 					max_feature_count = counts_response[max_feature]
-					info_string = str(max_feature) + ' '
+					# info_string = str(max_feature) + ' '
 			if (max_feature_count / max_number) >= node[1]['lower_bound']:
-				info_string += 'cov: ' + str(max_feature_count / max_number)
+				# info_string += 'cov: ' + str(max_feature_count / max_number)
 				if (len(node[1]['successors']) == 0):
 					index = columns['column_indices'][i]
 					if index in result:
-						result[index].append((node[1]['name'], info_string))
+						result[index].append((node[1]['name'], max_feature, max_feature_count / max_number))
 					else:
-						result[index] = [(node[1]['name'], info_string)]
+						result[index] = [(node[1]['name'], max_feature, max_feature_count / max_number)]
 				for new_node in node[1]['successors']:
 					precondition = node[0]
 					if node[1]['feature']:
@@ -64,12 +65,27 @@ def gazetteer_test(columns, gazetteer, tree):
 
 	return result
 
-def process_table(table, lookup, line_count, coverage_tree, out=False):
+def choose_interpretation(classification, ratings):
+	result = dict()
+	for number in classification:
+		new_interpretations = []
+		best = (0, float('inf'))
+		for i, interpretation in enumerate(classification[number]):
+			count = ratings.get_count(interpretation[0], interpretation[1])
+			if count < best[1]:
+				best = (i, count)
+		new_interpretations = [(x[0], x[1], x[2], i == best[0]) for i,x in enumerate(classification[number])]
+		result[number] = new_interpretations
+	return result
+
+def process_table(table, lookup, line_count, coverage_tree, ratings, out=False):
 	res, headers, rubbish_rows = pre.process(table['relation'])
 	if (not res):
 		return dict(), [], [], 0
 	if len(res['columns']) > 0:
 		res = gazetteer_test(res, lookup, coverage_tree)
+		res = choose_interpretation(res, ratings)
+		print(res)
 		return res, headers, rubbish_rows, 1
 	return dict(), headers, rubbish_rows, 1
 
@@ -93,6 +109,7 @@ def main(argc, argv):
 
 		g = Gazetteer(GAZETTEER_INDEX_LOCATION)
 		coverage_tree = CoverageTree(COVERAGE_TREE_LOCATION)
+		ratings = Ratings(RATES_FILE_LOCATION)
 		db_output = DatabaseOutput(DB_OUTPUT)
 		for arg in argv[2:]:
 			reader = TableReader(arg)
@@ -101,7 +118,7 @@ def main(argc, argv):
 				line_count = reader.get_line_count()
 				if (line_count >= targets[0]) and (line_count <= targets[1]):
 					print('Process Table', line_count, '...')
-					res, headers, rubbish_rows, quality = process_table(table, g, reader.get_line_count(), coverage_tree)
+					res, headers, rubbish_rows, quality = process_table(table, g, reader.get_line_count(), coverage_tree, ratings)
 					db_output.add_result(res, line_count, table['url'], headers, rubbish_rows, quality, table['relation'])
 
 				table = reader.get_next_table()
