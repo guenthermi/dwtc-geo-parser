@@ -3,6 +3,7 @@
 from reader import *
 from gazetteer import *
 from coverageScores import *
+from rating import *
 from databaseOutput import *
 import preprocessor as pre
 
@@ -15,6 +16,8 @@ HELP_TEXT = '\033[1mclassify.py\033[0m selector destination [dump]...'
 GAZETTEER_INDEX_LOCATION = 'index.db'
 
 COVERAGE_TREE_LOCATION = 'coverageTree.json'
+
+RATES_FILE_LOCATION = 'categoryCounts.json'
 
 DB_OUTPUT = 'output.db'
 
@@ -62,12 +65,26 @@ def gazetteer_test(columns, gazetteer, tree):
 
 	return result
 
-def process_table(table, lookup, line_count, coverage_tree, out=False):
+def choose_interpretation(classification, ratings):
+	result = dict()
+	for number in classification:
+		new_interpretations = []
+		best = (0, float('inf'))
+		for i, interpretation in enumerate(classification[number]):
+			count = ratings.get_count(interpretation[0], interpretation[1])
+			if count < best[1]:
+				best = (i, count)
+		new_interpretations = [(x[0], x[1], x[2], i == best[0]) for i,x in enumerate(classification[number])]
+		result[number] = new_interpretations
+	return result
+
+def process_table(table, lookup, line_count, coverage_tree, ratings, out=False):
 	res, headers, rubbish_rows = pre.process(table['relation'])
 	if (not res):
 		return dict(), [], [], 0
 	if len(res['columns']) > 0:
 		res = gazetteer_test(res, lookup, coverage_tree)
+		res = choose_interpretation(res, ratings)
 		print(res)
 		return res, headers, rubbish_rows, 1
 	return dict(), headers, rubbish_rows, 1
@@ -92,6 +109,7 @@ def main(argc, argv):
 
 		g = Gazetteer(GAZETTEER_INDEX_LOCATION)
 		coverage_tree = CoverageTree(COVERAGE_TREE_LOCATION)
+		ratings = Ratings(RATES_FILE_LOCATION)
 		db_output = DatabaseOutput(DB_OUTPUT)
 		for arg in argv[2:]:
 			reader = TableReader(arg)
@@ -100,7 +118,7 @@ def main(argc, argv):
 				line_count = reader.get_line_count()
 				if (line_count >= targets[0]) and (line_count <= targets[1]):
 					print('Process Table', line_count, '...')
-					res, headers, rubbish_rows, quality = process_table(table, g, reader.get_line_count(), coverage_tree)
+					res, headers, rubbish_rows, quality = process_table(table, g, reader.get_line_count(), coverage_tree, ratings)
 					db_output.add_result(res, line_count, table['url'], headers, rubbish_rows, quality, table['relation'])
 
 				table = reader.get_next_table()

@@ -10,7 +10,7 @@ class Ratings:
 		raw = ''.join(open(filename).readlines())
 		self.counts = json.loads(raw)
 
-	def getCount(self, category_name, feature):
+	def get_count(self, category_name, feature):
 		count = self.counts[category_name]
 		if '()' in count:
 			return count['()']
@@ -23,7 +23,7 @@ class Ratings:
 
 def main(argc, argv):
 	ratings = Ratings(RATE_FILE_LOCATION)
-	print(ratings.getCount('local_city', 'US'))
+	print(ratings.get_count('local_city', 'US'))
 
 if __name__ == "__main__":
 	main(len(sys.argv), sys.argv)
