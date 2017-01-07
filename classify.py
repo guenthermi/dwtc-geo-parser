@@ -10,8 +10,9 @@ import preprocessor as pre
 import ujson as json
 import sys
 import re
+import gzip
 
-HELP_TEXT = '\033[1mclassify.py\033[0m selector destination [dump]...'
+HELP_TEXT = '\033[1mclassify.py\033[0m selector geo_table_number non_geo_table_number source_dump destination'
 
 GAZETTEER_INDEX_LOCATION = 'index.db'
 
@@ -85,7 +86,6 @@ def process_table(table, lookup, line_count, coverage_tree, ratings, out=False):
 	if len(res['columns']) > 0:
 		res = gazetteer_test(res, lookup, coverage_tree)
 		res = choose_interpretation(res, ratings)
-		print(res)
 		return res, headers, rubbish_rows, 1
 	return dict(), headers, rubbish_rows, 1
 
@@ -106,22 +106,34 @@ def main(argc, argv):
 			targets = [int(argv[1]), int(argv[1])]
 		if re.match('^[0-9]+-[0-9]+$', argv[1]):
 			targets = list(map(lambda x: int(x), argv[1].split('-')))
-
+		geo_table_number = int(argv[2])
+		non_geo_table_number = int(argv[3])
+		geo_count = 0
+		non_geo_count = 0
+		output_file = gzip.open(argv[5], 'w')
 		g = Gazetteer(GAZETTEER_INDEX_LOCATION)
 		coverage_tree = CoverageTree(COVERAGE_TREE_LOCATION)
 		ratings = Ratings(RATES_FILE_LOCATION)
 		db_output = DatabaseOutput(DB_OUTPUT)
-		for arg in argv[2:]:
-			reader = TableReader(arg)
-			table = reader.get_next_table()
-			while (table):
-				line_count = reader.get_line_count()
-				if (line_count >= targets[0]) and (line_count <= targets[1]):
+		tables = argv[4]
+		reader = TableReader(tables)
+		table = reader.get_next_table()
+		while (table):
+			line_count = reader.get_line_count()
+			if (line_count >= targets[0]) and (line_count <= targets[1]):
+				if (geo_table_number > geo_count) or (non_geo_table_number > non_geo_count):
 					print('Process Table', line_count, '...')
 					res, headers, rubbish_rows, quality = process_table(table, g, reader.get_line_count(), coverage_tree, ratings)
-					db_output.add_result(res, line_count, table['url'], headers, rubbish_rows, quality, table['relation'])
+					if len(res) > 0:
+						if geo_table_number > geo_count:
+							geo_count += 1
+							output_file.write(reader.get_current_table_string())
+					else:
+						if non_geo_table_number > non_geo_count:
+							non_geo_count += 1
+							output_file.write(reader.get_current_table_string())
 
-				table = reader.get_next_table()
+			table = reader.get_next_table()
 
 if __name__ == "__main__":
 	main(len(sys.argv), sys.argv)
