@@ -9,4 +9,5 @@ evaluation/
 *.log
 *.pdf
 *.html
+!templates/*.html
 *_old.py

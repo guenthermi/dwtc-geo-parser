@@ -7,9 +7,9 @@ import cgi
 
 HELP_TEXT = '\033[1mplot_report.py\033[0m database destination'
 
-TEMPLATE_REPORT = 'evaluation/templates/report_tpl.html'
+TEMPLATE_REPORT = 'templates/report_tpl.html'
 
-TEMPLATE_TABLE = 'evaluation/templates/table_tpl.html'
+TEMPLATE_TABLE = 'templates/table_tpl.html'
 
 AUTHOR = 'AUTOGENERATE DOCUMENT'
 
