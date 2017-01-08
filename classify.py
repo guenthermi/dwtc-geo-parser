@@ -85,7 +85,6 @@ def process_table(table, lookup, line_count, coverage_tree, ratings, out=False):
 	if len(res['columns']) > 0:
 		res = gazetteer_test(res, lookup, coverage_tree)
 		res = choose_interpretation(res, ratings)
-		print(res)
 		return res, headers, rubbish_rows, 1
 	return dict(), headers, rubbish_rows, 1
 
@@ -110,8 +109,8 @@ def main(argc, argv):
 		g = Gazetteer(GAZETTEER_INDEX_LOCATION)
 		coverage_tree = CoverageTree(COVERAGE_TREE_LOCATION)
 		ratings = Ratings(RATES_FILE_LOCATION)
-		db_output = DatabaseOutput(DB_OUTPUT)
-		for arg in argv[2:]:
+		db_output = DatabaseOutput(argv[2])
+		for arg in argv[3:]:
 			reader = TableReader(arg)
 			table = reader.get_next_table()
 			while (table):
