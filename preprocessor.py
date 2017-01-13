@@ -71,6 +71,7 @@ def process(table):
 	return result, headers, rubbish_rows
 
 def weight_quality(table):
+	# TODO check top level domain
 	return detect_table_direction(table)
 
 def detect_table_direction(table):

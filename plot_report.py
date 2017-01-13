@@ -20,7 +20,7 @@ def process_result(cur, result):
 	rows = cur.fetchall()
 	return
 
-def generate_table_HTML(id, table, url, quality, geo_columns, header_rows, rubbish_rows):
+def generate_table_HTML(id, table, url, quality, geo_columns, header_rows, rubbish_rows, error_cols):
 	# read template
 	tpl = read_tpl(TEMPLATE_TABLE)
 
@@ -43,9 +43,15 @@ def generate_table_HTML(id, table, url, quality, geo_columns, header_rows, rubbi
 			rows += '<tr>'
 		for j, x in enumerate(row):
 			if j in geo_columns:
-				rows += '<td class="geo-entity">' + cgi.escape(x) + '</td>'
+				if j in error_cols:
+					rows += '<td class="false-positiv">' + cgi.escape(x) + '</td>'
+				else:
+					rows += '<td class="geo-entity">' + cgi.escape(x) + '</td>'
 			else:
-				rows += '<td>' + cgi.escape(x) + '</td>'
+				if j in error_cols:
+					rows += '<td class="false-negativ">' + cgi.escape(x) + '</td>'
+				else:
+					rows += '<td>' + cgi.escape(x) + '</td>'
 		rows += '</tr>\n'
 	rows += '<tr>'
 	for i, col in enumerate(table):
@@ -99,6 +105,10 @@ def process_output(cur, dest):
 	query_get_header_rows = 'SELECT Headers.RowNumber FROM Results INNER JOIN Headers ON Results.ResultId = Headers.ResultId WHERE Results.ResultId = ?'
 	# query to get rubbishRows
 	query_get_rubbish_rows = 'SELECT rubbishRows.RowNumber FROM Results INNER JOIN rubbishRows ON Results.ResultId = rubbishRows.ResultId WHERE Results.ResultId = ?'
+	# query to check if an error table exists
+	query_errors_exists = "SELECT name FROM sqlite_master WHERE type='table' AND name='Errors'"	
+	# query to get wrong classified rows
+	query_get_errors = 'SELECT ResultId, ColumnId FROM Errors WHERE ResultId=?'
 
 	cur.execute(query_get_tables)
 	tables = cur.fetchall()
@@ -117,7 +127,12 @@ def process_output(cur, dest):
 		header_rows = [x[0] for x in cur.fetchall()]
 		cur.execute(query_get_rubbish_rows, (str(id),))
 		rubbish_rows = [x[0] for x in cur.fetchall()]
-		HTMLCodes.append(generate_table_HTML(id, relations, url, int(quality), geo_cols_with_interpretations, header_rows, rubbish_rows))
+		error_cols = []
+		cur.execute(query_errors_exists)
+		if cur.fetchall():
+			cur.execute(query_get_errors, (str(id),))
+			error_cols = [y for (x,y) in cur.fetchall()]
+		HTMLCodes.append(generate_table_HTML(id, relations, url, int(quality), geo_cols_with_interpretations, header_rows, rubbish_rows, error_cols))
 
 	return HTMLCodes
 
