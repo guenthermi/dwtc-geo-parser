@@ -1,6 +1,7 @@
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,10 +22,12 @@ public class Main implements EntityDocumentProcessor {
 	final static int TIMEOUT_SEC = 0;
 
 	final static String DATABASE_LOCATION = "wikidata.db";
+	final static int BATCH_SIZE = 10000;
 
 	Connection con = null;
-
+	PreparedStatement meaningStmt = null;
 	Integer counter = 0;
+	Integer batchCounter = 0;
 
 	public static void main(String[] args) {
 		Main mainObject = new Main();
@@ -39,13 +42,19 @@ public class Main implements EntityDocumentProcessor {
 
 	public void processItemDocument(ItemDocument itemDocument) {
 		counter++;
+		if (counter % 10000 == 0) {
+			System.out.println("Proccessed " + counter + " Entities");
+		}
 		List<String> classIds = new ArrayList<String>();
 		List<String> terms = new ArrayList<String>();
 		for (StatementGroup stmtGr : itemDocument.getStatementGroups()) {
 			if (stmtGr.getProperty().getId().equals("P31")) {
 				for (org.wikidata.wdtk.datamodel.interfaces.Statement stmt : stmtGr
 						.getStatements()) {
-					classIds.add(((EntityIdValue) stmt.getValue()).getId());
+					EntityIdValue value = (EntityIdValue) stmt.getValue();
+					if (value != null) {
+						classIds.add(value.getId());
+					}
 				}
 			}
 		}
@@ -66,36 +75,38 @@ public class Main implements EntityDocumentProcessor {
 				terms.add(alias.getText());
 			}
 		}
-		for (String classId : classIds) {
-			for (String term : terms) {
-				try {
-					this.insertMeaning(term, classId);
-				} catch (SQLException e) {
-					e.printStackTrace();
+
+		try {
+			for (String classId : classIds) {
+				for (String term : terms) {
+					this.insertMeaningIntoBatch(term, classId);
 				}
 			}
-		}
-
-		if (counter % 1000 == 0){
-			System.out.println("Proccessed " + counter + " Entities");
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 
 	}
 
 	public void processPropertyDocument(PropertyDocument propertyDocument) {
 		counter++;
-		if (counter % 1000 == 0){
+		if (counter % 10000 == 0) {
 			System.out.println("Proccessed " + counter + " Entities");
 		}
 
 	}
 
-	public void insertMeaning(String term, String classId) throws SQLException {
-		java.sql.PreparedStatement stmt = con
-				.prepareStatement("INSERT INTO Meanings (Term, ClassId) VALUES (?, ?)");
-		stmt.setString(1, term);
-		stmt.setString(2, classId);
-		stmt.executeUpdate();
+	public void insertMeaningIntoBatch(String term, String classId)
+			throws SQLException {
+		meaningStmt.setString(1, term);
+		meaningStmt.setString(2, classId);
+		meaningStmt.addBatch();
+		batchCounter++;
+		if (batchCounter >= BATCH_SIZE) {
+			meaningStmt.executeBatch();
+			con.commit();
+			batchCounter = 0;
+		}
 	}
 
 	/**
@@ -131,10 +142,13 @@ public class Main implements EntityDocumentProcessor {
 		java.sql.Statement stmt = null;
 		Class.forName("org.sqlite.JDBC");
 		con = DriverManager.getConnection("jdbc:sqlite:" + DATABASE_LOCATION);
+		con.setAutoCommit(false);
 		stmt = con.createStatement();
 		String query = "CREATE TABLE Meanings (Id INTEGER PRIMARY KEY AUTOINCREMENT, Term TEXT, ClassId TEXT)";
 		stmt.executeUpdate(query);
 		stmt.close();
+		meaningStmt = con
+				.prepareStatement("INSERT INTO Meanings (Term, ClassId) VALUES (?, ?)");
 	}
 
 	public void closeConnection() throws SQLException {
