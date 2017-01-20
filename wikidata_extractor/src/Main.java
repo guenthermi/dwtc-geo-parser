@@ -47,6 +47,7 @@ public class Main implements EntityDocumentProcessor {
 		}
 	}
 
+	@Override
 	public void processItemDocument(ItemDocument itemDocument) {
 		counter++;
 		if (counter % 10000 == 0) {
@@ -95,6 +96,7 @@ public class Main implements EntityDocumentProcessor {
 
 	}
 
+	@Override
 	public void processPropertyDocument(PropertyDocument propertyDocument) {
 		counter++;
 		if (counter % 10000 == 0) {
