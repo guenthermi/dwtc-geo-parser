@@ -2,6 +2,7 @@
 
 from reader import *
 from gazetteer import *
+from wikidata_lookup import *
 from coverageScores import *
 from rating import *
 from databaseOutput import *
@@ -15,6 +16,8 @@ HELP_TEXT = '\033[1mclassify.py\033[0m selector destination [dump]...'
 
 GAZETTEER_INDEX_LOCATION = 'index.db'
 
+WIKIDATA_LOOKUP_LOCATION = 'wikidata_extractor/wikidata.db'
+
 COVERAGE_TREE_LOCATION = 'coverageTree.json'
 
 RATES_FILE_LOCATION = 'categoryCounts.json'
@@ -25,7 +28,7 @@ DB_OUTPUT = 'output.db'
 def post(table):
 	return
 
-def gazetteer_test(columns, gazetteer, tree):
+def gazetteer_test(columns, gazetteer, tree, wikidata_lookup):
 	result = dict()
 	MIN_NUM_FOUND_FACTOR = 0.7
 	MIN_FEATURE_CLASS_FACTOR = 0.99
@@ -62,7 +65,15 @@ def gazetteer_test(columns, gazetteer, tree):
 					if node[1]['feature']:
 						precondition[node[1]['feature']] = max_feature
 					nodes.append((precondition, new_node, max_feature_count))
-
+		if columns['column_indices'][i] in result:
+			# TODO wikidata lookup test
+			wl_result = wikidata_lookup.lookup_classes(col[0])
+			if (wl_result):
+				for key in wl_result:
+					if wl_result[key] > 0.8:
+						print('delete element')
+						del result[columns['column_indices'][i]]
+						break
 	return result
 
 def choose_interpretation(classification, ratings):
@@ -78,12 +89,12 @@ def choose_interpretation(classification, ratings):
 		result[number] = new_interpretations
 	return result
 
-def process_table(table, lookup, line_count, coverage_tree, ratings, out=False):
+def process_table(table, lookup, wikidata_lookup, line_count, coverage_tree, ratings, out=False):
 	res, headers, rubbish_rows = pre.process(table['relation'])
 	if (not res):
 		return dict(), [], [], 0
 	if len(res['columns']) > 0:
-		res = gazetteer_test(res, lookup, coverage_tree)
+		res = gazetteer_test(res, lookup, coverage_tree, wikidata_lookup)
 		res = choose_interpretation(res, ratings)
 		return res, headers, rubbish_rows, 1
 	return dict(), headers, rubbish_rows, 1
@@ -107,6 +118,7 @@ def main(argc, argv):
 			targets = list(map(lambda x: int(x), argv[1].split('-')))
 
 		g = Gazetteer(GAZETTEER_INDEX_LOCATION)
+		wl = WikidataLookup(WIKIDATA_LOOKUP_LOCATION)
 		coverage_tree = CoverageTree(COVERAGE_TREE_LOCATION)
 		ratings = Ratings(RATES_FILE_LOCATION)
 		db_output = DatabaseOutput(argv[2])
@@ -117,7 +129,7 @@ def main(argc, argv):
 				line_count = reader.get_line_count()
 				if (line_count >= targets[0]) and (line_count <= targets[1]):
 					print('Process Table', line_count, '...')
-					res, headers, rubbish_rows, quality = process_table(table, g, reader.get_line_count(), coverage_tree, ratings)
+					res, headers, rubbish_rows, quality = process_table(table, g, wl, reader.get_line_count(), coverage_tree, ratings)
 					db_output.add_result(res, line_count, table['url'], headers, rubbish_rows, quality, table['relation'])
 
 				table = reader.get_next_table()
