@@ -128,7 +128,6 @@ class Gazetteer:
 				g_result.add_result(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[4].decode('utf-8'), row[3])
 		return
 
-
 	def lookup_column(self, column):
 		""" Returns the GazetteerResult for a column of names and the general geo entities coverage """
 		result = GazetteerResult()
