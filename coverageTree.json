@@ -5,7 +5,7 @@
 		"featureValues": "",
 		"featureValuesType": "empty",
 		"lower_bound": 0.8,
-		"successors": ["001", "002", "003", "004", "005", "006", "007", "008", "009"]
+		"successors": ["001", "002", "003", "004", "005", "006", "007", "008"]
 	},
 	"001": {
 		"name": "city",
@@ -48,14 +48,6 @@
 		"successors": []
 	},
 	"006": {
-		"name": "spot",
-		"feature": "featureClass",
-		"featureValues": ["S"],
-		"featureValuesType": "specific",
-		"lower_bound": 0.95,
-		"successors": []
-	},
-	"007": {
 		"name": "mountain",
 		"feature": "featureClass",
 		"featureValues": ["T"],
@@ -63,7 +55,7 @@
 		"lower_bound": 0.8,
 		"successors": []
 	},
-	"008": {
+	"007": {
 		"name": "undersea",
 		"feature": "featureClass",
 		"featureValues": ["U"],
@@ -71,7 +63,7 @@
 		"lower_bound": 0.8,
 		"successors": []
 	},
-	"009": {
+	"008": {
 		"name": "forest",
 		"feature": "featureClass",
 		"featureValues": ["V"],

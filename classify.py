@@ -66,7 +66,7 @@ def gazetteer_test(columns, gazetteer, tree, wikidata_lookup):
 						precondition[node[1]['feature']] = max_feature
 					nodes.append((precondition, new_node, max_feature_count))
 		if columns['column_indices'][i] in result:
-			# TODO wikidata lookup test
+			# wikidata lookup test
 			wl_result = wikidata_lookup.lookup_classes(col[0])
 			if (wl_result):
 				for key in wl_result:

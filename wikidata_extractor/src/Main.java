@@ -38,6 +38,13 @@ public class Main implements EntityDocumentProcessor {
 			e.printStackTrace();
 		}
 		mainObject.processDump();
+
+		try {
+			mainObject.createIndex();
+			mainObject.closeConnection();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void processItemDocument(ItemDocument itemDocument) {
@@ -107,6 +114,14 @@ public class Main implements EntityDocumentProcessor {
 			con.commit();
 			batchCounter = 0;
 		}
+	}
+
+	public void createIndex() throws SQLException{
+		String query = "CREATE INDEX terms_index ON Meanings (Term)";
+		java.sql.Statement stmt = con.createStatement();
+		stmt.execute(query);
+		stmt.close();
+		con.commit();
 	}
 
 	/**
