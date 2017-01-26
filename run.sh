@@ -15,7 +15,7 @@ CLASSIFICATION=$4
 
 DUMPS=()
 if [ $# -lt 5 ]; then
-	echo ${bold}run${normal} selector database destination human_classification [dump]...
+	echo ${bold}run${normal} selector database html_destination human_classification [dump]...
 else
 	count=0
 	for arg in "$@"

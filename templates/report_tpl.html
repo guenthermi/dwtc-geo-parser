@@ -1,6 +1,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
 		<style>
 			body{
 				font-family: Arial,sans-serif;
@@ -48,10 +49,37 @@
 			.important{
 				color: #f00;
 			}
+			#map{
+			    visibility: hidden;
+			    width: 200px;
+			    height: 200px;
+			    background: #fff;
+			    position: fixed;
+			    left: 40%;
+			    top: 40%;
+			    border: 2px solid #000;
+
+			}
+			.close{
+				position: relative;
+				left: 180px;
+				top: 10px;
+			}
+			#osm{
+				width: 170px;
+				height: 170px;
+			}
+			.frame{
+				padding: 10px;
+			}
 
 		</style>
+		<script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+		<script src="http://www.openlayers.org/api/OpenLayers.js"></script>
+		{{ JAVASCRIPT }}
 	</head>
 	<body>
+		<div id="map"><div class="close"><i class="fa fa-times" aria-hidden="true"></i></div><div class="frame"><div id="osm"></div></div></div>
 		<header>
 			<h1>Evaluation Report DWTC Geo Parser</h1>
 			<p>Author: {{ AUTHOR }} </p>

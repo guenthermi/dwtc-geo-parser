@@ -4,7 +4,7 @@ import redis
 import sys
 import gzip
 
-HELP_TEXT = "\033[1mcreateRedisIndex\033[0m source file"
+HELP_TEXT = "\033[1mcreateRedisIndex\033[0m source"
 
 HOST = 'localhost'
 PORT = 6379
@@ -44,7 +44,8 @@ def readGeoNames(filename, r):
 			r.set(alias, ids)
 
 		# add content
-		content_line = splits[6] + b'\t' + splits[7] + b'\t' + splits[8] + b'\t' + splits[14] + b'\t' + splits[17]
+		# TODO lower casing
+		content_line = splits[6] + b'\t' + splits[7] + b'\t' + splits[8] + b'\t' + splits[14] + b'\t' + splits[4] + b'\t' + splits[5]
 		r.set(splits[0], content_line)
 
 	print('All aliases are loaded.')

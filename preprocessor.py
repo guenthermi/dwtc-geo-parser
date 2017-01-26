@@ -97,15 +97,14 @@ def cleanup_table(table, rubbish_rows, rubbish_cols, headers):
 	for i, col in enumerate(table):
 		newcol =  ([],[])
 		count = 0
-		if not (i in rubbish_cols):
-			for j, cell in enumerate(col):
-				if (not (j in rubbish_rows)) and (not (j in headers)):
-					if pre_classify(cell) == PreClass.GEO:
-						newcol[0].append(cell)
-						newcol[1].append(j)
-			if len(set(newcol[0])) > 1:
-				result['columns'].append(newcol)
-				result['column_indices'].append(i)
+		for j, cell in enumerate(col):
+			if (not (j in rubbish_rows)) and (not (j in headers)):
+				if pre_classify(cell) == PreClass.GEO:
+					newcol[0].append(cell)
+					newcol[1].append(j)
+		if len(set(newcol[0])) > 1:
+			result['columns'].append(newcol)
+			result['column_indices'].append(i)
 	return result
 
 def guess_header_positions(table, rubbish_rows, rubbish_cols):
@@ -132,7 +131,7 @@ def detect_rubbish(table):
 	# row-wise representation
 	transpose = [list(i) for i in zip(*table)]
 
-	# delete all rows that contain rubish
+	# delete all rows that contain rubbish
 	rubbish_rates = determine_rubbish_column_rates(table)
 	rubbish_rows = set()
 	for i, row in enumerate(transpose):

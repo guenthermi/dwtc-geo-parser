@@ -7,6 +7,7 @@ from coverageScores import *
 from rating import *
 from databaseOutput import *
 import preprocessor as pre
+import geo_coder as coder
 
 import ujson as json
 import sys
@@ -30,6 +31,7 @@ def post(table):
 
 def gazetteer_test(columns, gazetteer, tree, wikidata_lookup):
 	result = dict()
+	data = dict()
 	MIN_NUM_FOUND_FACTOR = 0.7
 	MIN_FEATURE_CLASS_FACTOR = 0.99
 
@@ -67,14 +69,18 @@ def gazetteer_test(columns, gazetteer, tree, wikidata_lookup):
 					nodes.append((precondition, new_node, max_feature_count))
 		if columns['column_indices'][i] in result:
 			# wikidata lookup test
+			is_result = True
 			wl_result = wikidata_lookup.lookup_classes(col[0])
 			if (wl_result):
 				for key in wl_result:
 					if wl_result[key] > 0.8:
 						print('delete element')
 						del result[columns['column_indices'][i]]
+						is_result = False
 						break
-	return result
+			if is_result:
+				data[columns['column_indices'][i]] = res.get_result()
+	return result, data
 
 def choose_interpretation(classification, ratings):
 	result = dict()
@@ -92,12 +98,13 @@ def choose_interpretation(classification, ratings):
 def process_table(table, lookup, wikidata_lookup, line_count, coverage_tree, ratings, out=False):
 	res, headers, rubbish_rows = pre.process(table['relation'])
 	if (not res):
-		return dict(), [], [], 0
+		return dict(), dict(), [], [], 0
 	if len(res['columns']) > 0:
-		res = gazetteer_test(res, lookup, coverage_tree, wikidata_lookup)
+		res, data = gazetteer_test(res, lookup, coverage_tree, wikidata_lookup)
 		res = choose_interpretation(res, ratings)
-		return res, headers, rubbish_rows, 1
-	return dict(), headers, rubbish_rows, 1
+		coordinates = coder.get_coordinates(res, data, coverage_tree)
+		return res, coordinates, headers, rubbish_rows, 1
+	return dict(), dict(), headers, rubbish_rows, 1
 
 def print_table(table, full=False):
 	for i, col in enumerate(table[0]):
@@ -129,8 +136,8 @@ def main(argc, argv):
 				line_count = reader.get_line_count()
 				if (line_count >= targets[0]) and (line_count <= targets[1]):
 					print('Process Table', line_count, '...')
-					res, headers, rubbish_rows, quality = process_table(table, g, wl, reader.get_line_count(), coverage_tree, ratings)
-					db_output.add_result(res, line_count, table['url'], headers, rubbish_rows, quality, table['relation'])
+					res, coordinates, headers, rubbish_rows, quality = process_table(table, g, wl, reader.get_line_count(), coverage_tree, ratings)
+					db_output.add_result(res, line_count, table['url'], coordinates, headers, rubbish_rows, quality, table['relation'])
 
 				table = reader.get_next_table()
 

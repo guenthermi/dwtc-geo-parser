@@ -31,9 +31,6 @@ MAX_COMMIT_SIZE = 1000000
 # timezone          : the iana timezone id (see file timeZone.txt) varchar(40)
 # modification date : date of last modification in yyyy-MM-dd format
 
-# TODO include index creation
-#	CREATE INDEX index_name ON table_name (column_name);
-
 def constractInsertQuery(tableName, values):
 	result = 'INSERT INTO ' + tableName + ' VALUES ('
 	for index in range(len(values) - 1):
