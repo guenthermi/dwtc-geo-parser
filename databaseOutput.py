@@ -13,7 +13,7 @@ class DatabaseOutput:
 		self.cur = self.con.cursor()
 		self.simple_schema = is_simple
 		self.create_tables()
-		print('Database output ínitialization done!')
+		print('Database output initialization done!')
 
 
 	def create_tables(self):
@@ -26,9 +26,10 @@ class DatabaseOutput:
 		self.cur.execute("CREATE TABLE Interpretations(Id INTEGER PRIMARY KEY AUTOINCREMENT, ColumnId INTEGER, Classification TEXT, Best INTEGER, Info TEXT, FOREIGN KEY(ColumnId) REFERENCES GeoColumns(Id))")
 		self.cur.execute("CREATE TABLE Headers(Id INTEGER PRIMARY KEY AUTOINCREMENT, ResultId INTEGER, RowNumber INT, Header TEXT, FOREIGN KEY(ResultId) REFERENCES Results(ResultId))")
 		self.cur.execute("CREATE TABLE RubbishRows(Id INTEGER PRIMARY KEY AUTOINCREMENT, ResultId INTEGER, RowNumber INT, FOREIGN KEY(ResultId) REFERENCES Results(ResultId))")
+		self.cur.execute("CREATE TABLE Coordinates(Id INTEGER PRIMARY KEY AUTOINCREMENT, ColumnId INTEGER, Term TEXT, Latitude INT, Longitude INT, FOREIGN KEY(ColumnId) REFERENCES GeoColumns(Id))")
 		self.con.commit()
 
-	def add_result(self, geo_columns, id, url, headers, rubbish_rows, quality, table):
+	def add_result(self, geo_columns, id, url, coordinates, headers, rubbish_rows, quality, table):
 		if self.simple_schema:
 			self.cur.execute('INSERT INTO Results VALUES (?, ?, ?, ?)', (str(id), url, str(quality), str(table)))
 		else:
@@ -47,6 +48,9 @@ class DatabaseOutput:
 					info += str(max_feature) + ' '
 				info += 'cov: ' + str(cov)
 				self.cur.execute('INSERT INTO Interpretations VALUES (null, ?, ?, ?, ?)', (str(column_id), name, str(int(best)), info))
+			for term in coordinates[column]:
+				values = coordinates[column][term]
+				self.cur.execute('INSERT INTO Coordinates VALUES (null, ?, ?, ?, ?)', (str(column_id), term, values[0], values[1]))
 		for row_id in headers:
 			self.cur.execute('INSERT INTO Headers VALUES (null, ?, ?, ?)', (str(result_id), str(row_id), str(headers[row_id])))
 		for row_id in rubbish_rows:

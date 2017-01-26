@@ -13,18 +13,19 @@ class GazetteerResult:
 		'featureClass': 0, 
 		'featureCode': 1, 
 		'countryCode': 2, 
-		'timezone': 3,
-		'population': 4
+		'population': 3,
+		'latitude': 4,
+		'longitude': 5
 	}
 	
 	def __init__(self):
 		self.result = dict()
 	
-	def add_result(self, name, featureClass, featureCode, countryCode, timezone, population):
+	def add_result(self, name, featureClass, featureCode, countryCode, population, latitude, longitude):
 		if name in self.result:
-			self.result[name].add((featureClass, featureCode, countryCode, timezone, population))
+			self.result[name].add((featureClass, featureCode, countryCode, population, latitude, longitude))
 		else:
-			self.result[name] = set({(featureClass, featureCode, countryCode, timezone, population)})
+			self.result[name] = set({(featureClass, featureCode, countryCode, population, latitude, longitude)})
 
 	def get_result(self):
 		return self.result
@@ -125,7 +126,7 @@ class Gazetteer:
 					row[3] = int(row[3])
 				else:
 					row[3] = 0
-				g_result.add_result(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[4].decode('utf-8'), row[3])
+				g_result.add_result(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[3], float(row[4]), float(row[5]))
 		return
 
 	def lookup_column(self, column):
@@ -154,7 +155,7 @@ class Gazetteer:
 						row[3] = int(row[3])
 					else:
 						row[3] = 0
-					g_result.add_result(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[4].decode('utf-8'), row[3])
+					g_result.add_result(name, row[0].decode('utf-8'), row[1].decode('utf-8'), row[2].decode('utf-8'), row[3], float(row[4]), float(row[5]))
 		return g_result, len(g_result.get_result())
 
 

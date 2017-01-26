@@ -10,6 +10,7 @@ class CoverageTree:
 	def __init__(self, config):
 		f = open(config, 'r')
 		data = json.loads(''.join(f.readlines()))
+		self.node_lookup = self._create_lookup(data)
 		self.origin = self._load_tree(data["0"], data)
 
 	def _load_tree(self, node, data):
@@ -31,9 +32,18 @@ class CoverageTree:
 				result[key] = node[key]
 		return result
 
+	def _create_lookup(self, data):
+		result = dict()
+		for id in data:
+			# assume that names are unique
+			result[data[id]['name']] = data[id]
+		return result
+
 	def get_origin(self):
 		return self.origin
 
+	def get_lookup(self):
+		return self.node_lookup
 
 def main(argc, argv):
 	if argc > 1:
