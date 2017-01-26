@@ -96,7 +96,7 @@ def choose_interpretation(classification, ratings):
 	return result
 
 def process_table(table, lookup, wikidata_lookup, line_count, coverage_tree, ratings, out=False):
-	res, headers, rubbish_rows = pre.process(table['relation'])
+	res, headers, rubbish_rows = pre.process(table['relation'], table['url'])
 	if (not res):
 		return dict(), dict(), [], [], 0
 	if len(res['columns']) > 0:

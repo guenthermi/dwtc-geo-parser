@@ -1,6 +1,7 @@
 
 import re
 import numpy as np
+from urllib.parse import urlparse
 
 from reader import *
 import sys
@@ -14,6 +15,8 @@ RE_ENGLISH = re.compile('^[a-z,A-Z,\-,\s,\'.]*$')
 RE_GEO_COMLETE = re.compile('^(([a-z,A-Z,\-,\'.\,]*|[0-9]*)(\s|$)+)*$')
 
 RE_NO_RUBBISH = re.compile('.*[a-z,A-Z,0-9].*')
+
+VALID_TOP_LEVELS = ['en', 'us', 'au', 'de', 'at', 'ch', 'org', 'com', 'edu', 'net', 'gov']
 
 class PreClass:
 	UNVALID, VALID, NUMBER, GEO = range(4) 
@@ -50,12 +53,12 @@ def geo(elem):
 		return True
 	return False
 
-def process(table):
+def process(table, url):
 	# possible geo columns
 	result = {'columns': [], 'column_indices':[]}
 
 	# TODO determine table direction
-	quality = weight_quality(table)
+	quality = weight_quality(table, url)
 	if not quality:
 		return None, None, None
 
@@ -70,8 +73,10 @@ def process(table):
 
 	return result, headers, rubbish_rows
 
-def weight_quality(table):
-	# TODO check top level domain
+def weight_quality(table, url):
+	# check top level domain
+	if urlparse(url).hostname.split('.')[-1] not in VALID_TOP_LEVELS:
+		return False
 	return detect_table_direction(table)
 
 def detect_table_direction(table):
