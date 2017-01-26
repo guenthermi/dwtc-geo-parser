@@ -2,6 +2,7 @@
 
 import ujson as json
 import sys
+import copy
 
 # make sure that there is no cycle in the graph!!
 MAX_ITERATION = 1000 # maximal number of nodes (to prevent infinite loops)
@@ -10,8 +11,8 @@ class CoverageTree:
 	def __init__(self, config):
 		f = open(config, 'r')
 		data = json.loads(''.join(f.readlines()))
-		self.node_lookup = self._create_lookup(data)
 		self.origin = self._load_tree(data["0"], data)
+		self.node_lookup = self._create_lookup()
 
 	def _load_tree(self, node, data):
 		count = 0
@@ -32,11 +33,26 @@ class CoverageTree:
 				result[key] = node[key]
 		return result
 
-	def _create_lookup(self, data):
+	def _create_lookup(self):
 		result = dict()
-		for id in data:
-			# assume that names are unique
-			result[data[id]['name']] = data[id]
+		paths = [[copy.deepcopy(self.origin)]]
+		found = True
+		while found:
+			found = False
+			new_paths = []
+			for path in paths:
+				if path[-1]['successors']:
+					for succ in path[-1]['successors']:
+						new_paths.append(path + [succ])
+					found = True
+				else:
+					new_paths.append(path)
+			paths = new_paths
+		for path in paths:
+			for entry in path:
+				if 'successors' in entry:
+					del entry['successors']
+			result[path[-1]['name']] = path
 		return result
 
 	def get_origin(self):
@@ -48,7 +64,9 @@ class CoverageTree:
 def main(argc, argv):
 	if argc > 1:
 		tree = CoverageTree(argv[1])
-		print(tree.get_origin())
+		lookup = tree.get_lookup()
+		for key in lookup:
+			print(key, lookup[key])
 	else:
 		print('config file missing')
 
