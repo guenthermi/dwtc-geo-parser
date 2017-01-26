@@ -19,34 +19,45 @@ def _filter_by_best(best_interpretations, data, lookup):
 	filtered = dict()
 	for index in data:
 		best = best_interpretations[index]
-		feature = lookup[best[0]]['feature']
-		featureValuesType = lookup[best[0]]['featureValuesType']
-		featureValues = lookup[best[0]]['featureValues']
+		feature = best[1]
 		column = data[index]
 		filtered[index] = dict()
 		for entry in column:
 			term = entry
 			geo_entities = column[entry]
 			for entity in geo_entities:
-				# TODO get right property from coverage tree
-				if (featureValuesType == 'specific') or (featureValuesType == 'all'):
-					if entity[INDICES[feature]] == best[1]:
-						if term in filtered[index]:
-							filtered[index][term].add(entity)
+				is_valid = True
+				for node in lookup[best[0]]:
+					if node['featureValuesType'] == 'empty':
+						continue
+					elif node['featureValuesType'] == 'specific':
+						if entity[INDICES[node['feature']]] in node['featureValues']:
+							continue
 						else:
-							filtered[index][term] = set({entity})
-				elif featureValuesType == 'minimum':
-					if entity[INDICES[feature]] > int(featureValues):
-						if term in filtered[index]:
-							filtered[index][term].add(entity)
+							is_valid = False
+							break
+					elif node['featureValuesType'] == 'all':
+						if entity[INDICES[node['feature']]] == best[1]:
+							continue
 						else:
-							filtered[index][term] = set({entity})
-				else:
+							is_valid = False
+							break
+					elif node['featureValuesType'] == 'minimum':
+						if entity[INDICES[node['feature']]] > node['featureValues']:
+							continue
+						else:
+							is_valid = False
+							break
+					else:
+						print('Error: Unknown featureValuesType: ', node.featureValuesType)
+						is_valid = False
+				if is_valid:
 					if term in filtered[index]:
 						filtered[index][term].add(entity)
 					else:
 						filtered[index][term] = set({entity})
 	return filtered
+
 
 def _filter_by_feature_code(data):
 	for index in data:
@@ -85,6 +96,8 @@ def _get_center(column):
 	g_sum_lat = 0
 	g_sum_long = 0
 	g_size = len(column)
+	if g_size == 0:
+		return (0,0)
 	for term in column:
 		size = len(column[term])
 		sum_lat = 0
@@ -112,13 +125,11 @@ def _choose_entities(data):
 def get_coordinates(interpretations, data, coverage_tree):
 	# get best
 	best = _get_only_best_interpreations(interpretations)
-	# TODO filter data by interpretations
+	# filter entities by the semantic of the interpretation
 	filtered = dict()
-	# print('first', data)
 	filtered = _filter_by_best(best, data, coverage_tree.get_lookup())
-	# print(best)
-	# print('second', filtered)
 	filtered = _filter_by_feature_code(filtered)
+	# choose entities if there are still multiple possibilities
 	choice = _choose_entities(filtered)
 
 	return choice
