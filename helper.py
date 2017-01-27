@@ -12,20 +12,30 @@ def print_column(table, col):
 def print_size(table):
 	print(len(table['relation']))
 
-def create_evaluation_template(filename, reader):
+def create_evaluation_template(filename, reader, existing_classification):
+	lookup = dict()
+	for classif in existing_classification:
+		classification_file = open(classif, 'r')
+		data = ''.join(classification_file.readlines())
+		json_data = json.loads(data)
+		for id in json_data:
+			lookup[json_data[id]['url']] = json_data[id]
 	file = open(filename, 'w')
 	table = reader.get_next_table()
 	line_count = reader.get_line_count() 
 	file.write('{\n')
 	while (table):
 		next_table = reader.get_next_table()
-		file.write(create_evaluation_entry(table,reader.get_line_count()-1, (next_table == None)))
+		file.write(create_evaluation_entry(table,reader.get_line_count()-1, (next_table == None), lookup))
 		table = next_table
 	file.write('}\n')
 	file.close()
 
-def create_evaluation_entry(table, count, last):
-	template = 	'\t"' + str(count) + '": {\n\t\t"geo_columns": [],\n\t\t"size": ' \
+def create_evaluation_entry(table, count, last, lookup):
+	geo_columns = '[]'
+	if table['url'] in lookup:
+		geo_columns = str(lookup[table['url']]['geo_columns'])
+	template = 	'\t"' + str(count) + '": {\n\t\t"geo_columns": ' + geo_columns + ',\n\t\t"size": ' \
 		+ str(len(table['relation'])) + ',\n\t\t"url": "' + table['url'] + '"\n\t}'
 	if not last:
 		template += ',\n'
@@ -127,7 +137,7 @@ def info_service(reader, argv):
 
 def main(argc, argv):
 	if argv[1] == '--create_template':
-		create_evaluation_template(argv[3], TableReader(argv[2]))
+		create_evaluation_template(argv[3], TableReader(argv[2]), argv[4:])
 	elif argv[1] == '--calculate_statistics':
 		calculate_statistics(argv)
 	elif argv[1] == '--denote_errors':
