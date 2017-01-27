@@ -12,6 +12,7 @@ import geo_coder as coder
 import ujson as json
 import sys
 import re
+import gzip
 
 HELP_TEXT = '\033[1mclassify.py\033[0m selector destination [dump]...'
 
@@ -113,21 +114,50 @@ def print_table(table, full=False):
 		else:
 			print(col[0])
 
+def create_test_dump(dest, g, wl, coverage_tree, ratings, dumps, positive_size, negative_size):
+	f = gzip.open(dest, 'w')
+	p_output_size = 0
+	n_output_size = 0
+	for dump in dumps:
+		reader = TableReader(dump)
+		table = reader.get_next_table()
+		while(table):
+			line_count = reader.get_line_count()
+			print('Process Table', line_count, '... OutputSize: Positive:', p_output_size, 'Negative:', n_output_size)
+			res, coordinates, headers, rubbish_rows, quality = process_table(table, g, wl, reader.get_line_count(), coverage_tree, ratings)
+			if quality:
+				if res and (p_output_size < positive_size):
+					f.write(bytes(json.dumps(table), 'UTF-8'))
+					f.write(bytes('\n', 'UTF-8'))
+					p_output_size += 1
+				else:
+					if n_output_size < negative_size:
+						f.write(bytes(json.dumps(table), 'UTF-8'))
+						f.write(bytes('\n', 'UTF-8'))
+						n_output_size += 1
+				if (p_output_size >= positive_size) and (n_output_size >= negative_size):
+					break
+			table = reader.get_next_table()
+	return
+
 def main(argc, argv):
 	if (argc < 3):
 		print(HELP_TEXT)
 	else:
+		g = Gazetteer(GAZETTEER_INDEX_LOCATION)
+		wl = WikidataLookup(WIKIDATA_LOOKUP_LOCATION)
+		coverage_tree = CoverageTree(COVERAGE_TREE_LOCATION)
+		ratings = Ratings(RATES_FILE_LOCATION)
+
+		if argv[1] == '--create_test_dump':
+			create_test_dump(argv[2], g, wl, coverage_tree, ratings, argv[5:], int(argv[3]), int(argv[4]))
+			return
 		# determine target lines
 		targets = [0, float('inf')]
 		if argv[1].isdigit():
 			targets = [int(argv[1]), int(argv[1])]
 		if re.match('^[0-9]+-[0-9]+$', argv[1]):
 			targets = list(map(lambda x: int(x), argv[1].split('-')))
-
-		g = Gazetteer(GAZETTEER_INDEX_LOCATION)
-		wl = WikidataLookup(WIKIDATA_LOOKUP_LOCATION)
-		coverage_tree = CoverageTree(COVERAGE_TREE_LOCATION)
-		ratings = Ratings(RATES_FILE_LOCATION)
 		db_output = DatabaseOutput(argv[2])
 		for arg in argv[3:]:
 			reader = TableReader(arg)
