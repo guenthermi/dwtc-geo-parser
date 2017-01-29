@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 from reader import *
 import sys
 
-RE_NUMBER = re.compile('^[\-]?[0-9]*,?[0-9]*\.?[0-9]*$')
+RE_NUMBER = re.compile('^[\-]?([0-9]*,?)*[0-9]*\.?[0-9]*$')
 
 RE_NO_NUMBER = re.compile('[a-z,A-Z]')
 
@@ -74,8 +74,12 @@ def process(table, url):
 	return result, headers, rubbish_rows
 
 def weight_quality(table, url):
+	if len(table[0]) <= 5:
+		return False
 	# check top level domain
 	if urlparse(url).hostname.split('.')[-1] not in VALID_TOP_LEVELS:
+		return False
+	if measure_col_consistence(table) <= 0.5:
 		return False
 	return detect_table_direction(table)
 
@@ -95,6 +99,24 @@ def detect_table_direction(table):
 			classes.append(pre_classify(cell))
 		vertical_count += max(np.bincount(classes))
 	return (horizontal_count > vertical_count)
+
+def measure_col_consistence(table):
+	count = 0
+	table_size = 0
+	for col in table:
+		classes = []
+		for cell in col:
+			classes.append(pre_classify(cell))
+		bin_counts = np.bincount(classes)
+		max_count = max(bin_counts)
+		if list(bin_counts).index(max_count) != PreClass.UNVALID:
+			if (max_count / len(col)) >= 0.7:
+				count += 1
+			table_size += 1
+	if table_size == 0:
+		return 0
+	else:
+		return count / table_size
 
 def cleanup_table(table, rubbish_rows, rubbish_cols, headers):
 	result = {'columns': [], 'column_indices': []}
