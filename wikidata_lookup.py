@@ -17,7 +17,7 @@ class WikidataLookup:
 
 	def lookup_classes(self, column):
 		query = "SELECT Term, ClassId FROM Meanings WHERE Term IN (" + '?, '*(len(column)-1) +  "?)"
-		self.cur.execute(query, tuple(column))
+		self.cur.execute(query, tuple([c.lower() for c in column]))
 		query_results = self.cur.fetchall()
 		# TODO determine classes
 		classes = set([y for (x,y) in query_results])

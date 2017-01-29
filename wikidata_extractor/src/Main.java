@@ -71,7 +71,7 @@ public class Main implements EntityDocumentProcessor {
 		}
 		MonolingualTextValue label = itemDocument.getLabels().get("en");
 		if (label != null) {
-			terms.add(label.getText());
+			terms.add(label.getText().toLowerCase());
 		}
 		if (terms.size() == 0) {
 			return;
@@ -80,7 +80,7 @@ public class Main implements EntityDocumentProcessor {
 				.get("en");
 		if (aliases != null) {
 			for (MonolingualTextValue alias : aliases) {
-				terms.add(alias.getText());
+				terms.add(alias.getText().toLowerCase());
 			}
 		}
 
