@@ -4,8 +4,6 @@ This repository contains the code for the Geoparser and Geocoder for the [Dresde
 
 # Setup
 
-## Dependencies
-
 You need to install following python packages:
 * redis
 * ujson
@@ -13,6 +11,7 @@ You need to install following python packages:
 Install: ````pip3 install redis ujson````
 
 In addition you need redis and sqlite3
+
 ````sudo apt-get install redis-server sqlite3````
 
 
@@ -55,7 +54,7 @@ cd ..
 You can test the geoparsing and geocoding by running:
 
 ````
-run 0-100 output.db report.html none data/dwtc-000.json.gz
+./run 0-100 output.db report.html none data/dwtc-000.json.gz
 ````
 
 # Geoparsing and geocoding
