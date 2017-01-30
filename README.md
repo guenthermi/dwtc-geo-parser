@@ -22,13 +22,13 @@ redis-server
 ````
 After that you have to create the geo names index by running
 ````
-# download geo names gazetteer data
+# Download Geo Names Gazetteer Data
 mkdir data
 cd data
 wget http://download.geonames.org/export/dump/allCountries.zip
 cd ..
 
-# fill redis server with data
+# Fill Redis Server with Data
 ./createRedisIndex.py data/allCountries.zip
 ````
 
@@ -49,7 +49,7 @@ for i in $(seq -w 0 500); do wget http://wwwdb.inf.tu-dresden.de/misc/dwtc/data_
 cd ..
 ````
 
-# Getting started
+# Getting Started
 
 You can test the geoparsing and geocoding by running:
 
@@ -57,7 +57,7 @@ You can test the geoparsing and geocoding by running:
 ./run 0-100 output.db report.html none data/dwtc-000.json.gz
 ````
 
-# Geoparsing and geocoding
+# Geoparsing and Geocoding
 
 To run the the geo parser and geocoder call `classify.py` where `selector` describes the range of input tables (e.g. `0-100`), `destination` is the location of the database for storing the results and `[dump]` a list of dump files of the DWTC Corpus.
 
