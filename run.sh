@@ -27,8 +27,10 @@ else
 	done
 	echo "classification..."
 	./classify.py $SELECTOR $DATABASE_DEST ${DUMPS[@]}
-	echo "denote errors according to human classification..."
-	./helper.py --denote_errors $CLASSIFICATION $DATABASE_DEST
+	if [ $CLASSIFICATION -ne "none"]; then
+		echo "denote errors according to human classification..."
+		./helper.py --denote_errors $CLASSIFICATION $DATABASE_DEST
+	fi
 	echo "create html output..."
 	./plot_report.py $DATABASE_DEST $HTML_DEST
 	echo "Done!"
