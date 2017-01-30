@@ -9,6 +9,7 @@ This repository contains the code for the Geoparser and Geocoder for the [Dresde
 You need to install following python packages:
 * redis
 * ujson
+
 Install: ````pip3 install redis ujson````
 
 In addition you need redis and sqlite3
