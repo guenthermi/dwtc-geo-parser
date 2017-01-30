@@ -26,6 +26,8 @@ After that you have to create the geo names index by running
 mkdir data
 cd data
 wget http://download.geonames.org/export/dump/allCountries.zip
+unzip allCountries.zip
+gzip allCountries.txt
 cd ..
 
 # Fill Redis Server with Data
