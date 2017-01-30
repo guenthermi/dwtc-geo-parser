@@ -7,8 +7,10 @@ import sys
 class WikidataLookup:
 
 	dis_classes = {
-		'name': set({'Q12308941', 'Q11879590'}),
-		'sport_team': set({'Q17156793'})
+		'name': (set({'Q12308941', 'Q11879590', 'Q3409032'}), 0.8),
+		'natural_number': (set({'Q21199'}), 0.7),
+		'color': (set({'Q1075'}), 0.7),
+		'sport_team': (set({'Q17156793'}), 0.7)
 	}
 
 	def __init__(self, db):
@@ -34,11 +36,11 @@ class WikidataLookup:
 		for c in WikidataLookup.dis_classes:
 			counter = 0
 			for key in result_dict:
-				for entry in WikidataLookup.dis_classes[c]:
+				for entry in WikidataLookup.dis_classes[c][0]:
 					if entry in result_dict[key]:
 						counter += 1
 						break
-			if (counter / len(result_dict)) > 0.5:
+			if (counter / len(result_dict)) > WikidataLookup.dis_classes[c][1]:
 				covs[c] = counter / len(result_dict)
 		return covs
 

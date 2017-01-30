@@ -74,7 +74,7 @@ def gazetteer_test(columns, gazetteer, tree, wikidata_lookup):
 			wl_result = wikidata_lookup.lookup_classes(col[0])
 			if (wl_result):
 				for key in wl_result:
-					if wl_result[key] > 0.8:
+					if wl_result[key]:
 						print('delete element')
 						del result[columns['column_indices'][i]]
 						is_result = False
