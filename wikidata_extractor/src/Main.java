@@ -18,7 +18,7 @@ import org.wikidata.wdtk.dumpfiles.MwDumpFile;
 
 public class Main implements EntityDocumentProcessor {
 	final static boolean ONLY_CURRENT_REVISIONS = true;
-	final static boolean OFFLINE_MODE = true;
+	final static boolean OFFLINE_MODE = false;
 	final static int TIMEOUT_SEC = 0;
 
 	final static String DATABASE_LOCATION = "wikidata.db";
