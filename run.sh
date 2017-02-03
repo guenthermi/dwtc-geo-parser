@@ -27,7 +27,7 @@ else
 	done
 	echo "classification..."
 	./classify.py $SELECTOR $DATABASE_DEST ${DUMPS[@]}
-	if [ $CLASSIFICATION -ne "none"]; then
+	if [ "$CLASSIFICATION" != "none" ]; then
 		echo "denote errors according to human classification..."
 		./helper.py --denote_errors $CLASSIFICATION $DATABASE_DEST
 	fi
