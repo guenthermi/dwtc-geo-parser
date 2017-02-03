@@ -31,10 +31,11 @@ gzip allCountries.txt
 cd ..
 
 # Fill Redis Server with Data
-./createRedisIndex.py data/allCountries.zip
+./createRedisIndex.py data/allCountries.txt.gz
 ````
+Redis will save a backup of the index in dwtc-geo-parser folder. The next time you start a redis server in this location the backup will be loded (which is much faster than recreating the index from allCountries.txt.gz).
 
-To obtain the Wikidata class index run the wikidata_extrator. This can take a while.
+To create the Wikidata class index run the wikidata_extrator. This can take a while.
 
 ````
 cd wikidata_extractor
