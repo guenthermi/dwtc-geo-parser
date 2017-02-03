@@ -3,6 +3,7 @@
 from gazetteer import *
 
 import sys
+import math
 
 INDICES = GazetteerResult.FEATURE_INDICES
 
@@ -92,35 +93,95 @@ def _filter_by_feature_code(data):
 					data[index][term] = new_subject
 	return data
 
-def _get_center(column):
-	g_sum_lat = 0
-	g_sum_long = 0
-	g_size = len(column)
-	if g_size == 0:
-		return (0,0)
-	for term in column:
-		size = len(column[term])
-		sum_lat = 0
-		sum_long = 0
-		for entity in column[term]:
-			sum_lat += entity[4]
-			sum_long += entity[5]
-		g_sum_lat += sum_lat / size
-		g_sum_long += sum_long / size
-	return (g_sum_lat / g_size), (g_sum_long / size)
+def _init_probabilities(data):
+	probs = dict()
+	for term in data:
+		entities = data[term]
+		for i, entity in enumerate(entities):
+			probs[(term,i)] = 1 / len(entities)
+	return probs
+
+def project_3d(cooridinates):
+	lat, long = cooridinates
+	x = math.sin(long *(math.pi / 180) )
+	y = math.cos(long *(math.pi / 180) )
+	z = math.sin(lat *(math.pi / 180) )
+	return (x,y,z)
+
+def _calculate_centroid(data, probs):
+	center = [0,0,0]
+	for term in data:
+		entities = data[term]
+		x, y, z = 0.0, 0.0, 0.0
+		for i, entity in enumerate(entities):
+			location = (entity[4], entity[5])
+			projection = project_3d(location)
+			x += probs[(term,i)] * projection[0]
+			y += probs[(term,i)] * projection[1]
+			z += probs[(term,i)] * projection[2]
+		center[0] += (float(x) / len(data))
+		center[1] += (float(y) / len(data))
+		center[2] += (float(z) / len(data))
+	return (center[0], center[1], center[2])
+
+def _distance(value1, value2):
+	if len(value1) != len(value2):
+		return None
+	dist = 0
+	for i in range(len(value1)):
+		dist += (value1[i] - value2[i])**2
+	return dist
+
+def _update_probabilities(data, center, probs):
+	# calculate distances
+	for term in data:
+		entities = data[term]
+		summation = 0
+		for entity in entities:
+			location = (entity[4], entity[5])
+			summation += 1.0 / (_distance(center, project_3d(location)))
+		for i, entity in enumerate(entities):
+			location = (entity[4], entity[5])
+			probs[(term,i)] = 1.0 / ((_distance(center, project_3d(location))) * summation)
+
+def _learn_assignment(data):
+	INTERATIONS = 20
+	# init
+	probs = _init_probabilities(data)
+
+	for i in range(INTERATIONS):
+		# calculate center
+		center = _calculate_centroid(data, probs)
+		# update probs
+		_update_probabilities(data, center, probs)
+
+	return probs
 
 def _choose_entities(data):
 	result = dict()
 	for index in data:
 		column = data[index]
-		center = _get_center(column)
-		entities = dict()
-		for term in column:
-			best = min(column[term], key=lambda x: (x[4]-center[0])**2 + (x[5]-center[1])**2)
-			entities[term] = (best[4], best[5])
-		result[index] = entities
-	return result
 
+		# transform column
+		for term in column:
+			column[term] = list(column[term])
+		
+		# calculate probabilities
+		probs = _learn_assignment(column)
+
+		# choose best entity for every term
+		choice = dict()
+		for term in column:
+			max_prob = 0
+			max_elem = None
+			for i, elem in enumerate(column[term]):
+				if probs[(term,i)] > max_prob:
+					max_prob = probs[(term,i)]
+					max_elem = column[term][i]
+			choice[term] = (max_elem[4], max_elem[5])
+		
+		result[index] = choice
+	return result
 
 def get_coordinates(interpretations, data, coverage_tree):
 	# get best
@@ -131,6 +192,8 @@ def get_coordinates(interpretations, data, coverage_tree):
 	filtered = _filter_by_feature_code(filtered)
 	# choose entities if there are still multiple possibilities
 	choice = _choose_entities(filtered)
+	# choose entities if there are still multiple possibilities
+	# choise = _learn_assignment(filtered)
 
 	return choice
 
