@@ -75,6 +75,8 @@ def generate_table_HTML(id, table, url, quality, geo_columns, header_rows, rubbi
 	for i in range(len(tpl[1])):
 		if tpl[1][i] == ' TABLE_NAME ':
 			tpl[1][i] = table_name
+		if tpl[1][i] == ' TABLE_ID ':
+			tpl[1][i] = str(id)
 		if tpl[1][i] == ' ROWS ':
 			tpl[1][i] = rows
 		if tpl[1][i] == ' URL ':
