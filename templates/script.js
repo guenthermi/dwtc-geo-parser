@@ -30,4 +30,7 @@ $(function(){
 	$('.close').click(function(){
 		$('#map').css('visibility', 'hidden');
 	});
-})
+	if (window.location.href.split('#').length > 1){
+		window.location.href = '#' + window.location.href.split('#')[1];
+	}
+});
