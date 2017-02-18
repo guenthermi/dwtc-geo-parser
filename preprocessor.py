@@ -22,6 +22,10 @@ def process(table, url):
 		return None, None, None # struture to unclear -> bad quality
 	rubbish = set(rubbish_rows).union(set(empty_rows))
 
+	# do language check
+	if not quality_assessment.language_check(headers):
+		return None, None, None
+
 	# remove rubbish rows and headers
 	result = cleanup_table(table, rubbish, set(), headers)
 
