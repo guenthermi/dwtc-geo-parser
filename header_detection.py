@@ -150,7 +150,7 @@ def detect_headers(table):
 	# check if headers could be detected
 	if (len(result[1]) > 5) and (len(result[1])*5 > len(result[0])):
 		if means[1] > 0.8:
-			return [],[], empty_rows
+			return dict(),[], empty_rows
 		else:
 			return None, None, None
 	size = len(result[0]) + len(result[1])
@@ -166,7 +166,11 @@ def detect_headers(table):
 		else:
 			if i in result[1]:
 				rubbish.append(row_indices[i])
-	return headers, rubbish, empty_rows
+	headers_dict = dict()
+	transpose = [list(i) for i in zip(*table)]
+	for i in headers:
+		headers_dict[i] = ' '.join(transpose[i])
+	return headers_dict, rubbish, empty_rows
 
 
 def _show_histogram(data):
@@ -191,14 +195,10 @@ def main(argc, argv):
 		if (line_count >= targets[0]) and (line_count <= targets[1]):
 			headers, rubbish = detect_headers(table['relation'])
 			if headers == None:
-				headers = []
+				headers = dict()
 			if rubbish == None:
 				rubbish = []
-			headers_dict = dict()
-			transpose = [list(i) for i in zip(*table['relation'])]
-			for i in headers:
-				headers_dict[i] = ''.join(transpose[i])
-			db_output.add_result(dict(), line_count, table['url'], dict(), headers_dict, rubbish, 1, table['relation'])
+			db_output.add_result(dict(), line_count, table['url'], dict(), headers, rubbish, 1, table['relation'])
 		if line_count > targets[1]:
 			break
 		table = reader.get_next_table()

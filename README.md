@@ -7,8 +7,9 @@ This repository contains the code for the Geoparser and Geocoder for the [Dresde
 You need to install following python packages:
 * redis
 * ujson
+* pyenchant
 
-Install: ````pip3 install redis ujson````
+Install: ````pip3 install redis ujson pyenchant````
 
 In addition you need redis and sqlite3
 
