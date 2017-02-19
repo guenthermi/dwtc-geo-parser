@@ -7,7 +7,7 @@ import sys
 class WikidataLookup:
 
 	dis_classes = {
-		'name': (set({'Q12308941', 'Q11879590', 'Q3409032'}), 0.8),
+		'name': (set({'Q12308941', 'Q11879590', 'Q3409032', 'Q101352', 'Q202444'}), 0.8), 
 		'natural_number': (set({'Q21199'}), 0.7),
 		'color': (set({'Q1075'}), 0.7),
 		'sport_team': (set({'Q17156793'}), 0.7)

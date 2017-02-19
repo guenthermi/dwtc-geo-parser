@@ -6,7 +6,7 @@ import numpy as np
 import sys
 
 
-RE_NUMBER = re.compile('^[\-]?([0-9]*,?)*[0-9]*\.?[0-9]*$')
+RE_NUMBER = re.compile('^[\-,\.,\.,0-9]*$')
 
 RE_NO_NUMBER = re.compile('[a-z,A-Z]')
 
