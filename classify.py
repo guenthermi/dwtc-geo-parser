@@ -99,7 +99,7 @@ def choose_interpretation(classification, ratings):
 def process_table(table, lookup, wikidata_lookup, line_count, coverage_tree, ratings, out=False):
 	res, headers, rubbish_rows = pre.process(table['relation'], table['url'])
 	if (not res):
-		return dict(), dict(), [], [], 0
+		return dict(), dict(), dict(), [], 0
 	if len(res['columns']) > 0:
 		res, data = gazetteer_test(res, lookup, coverage_tree, wikidata_lookup)
 		res = choose_interpretation(res, ratings)

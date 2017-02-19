@@ -5,6 +5,7 @@ import content_class
 import re
 import numpy as np
 from urllib.parse import urlparse
+import enchant
 
 import sys
 from databaseOutput import *
@@ -13,6 +14,8 @@ from databaseOutput import *
 
 VALID_TOP_LEVELS = ['en', 'us', 'au', 'de', 'at', 'ch', 'org', 'com', 'edu', 'net', 'gov']
 
+enchant_dicts = [enchant.Dict("en_US"), enchant.Dict("de_DE")]
+
 def weight_quality(table, url):
 	if len(table[0]) <= 5:
 		return False
@@ -20,7 +23,7 @@ def weight_quality(table, url):
 		return False
 	# if not clean_string_check(table):
 	# 	return False
-	if not language_check(table, url):
+	if not url_check(table, url):
 		return False
 	return True
 
@@ -52,10 +55,37 @@ def clean_string_check(table):
 	return True
 
 
-def language_check(table, url):
+def url_check(table, url):
 	if urlparse(url).hostname.split('.')[-1] not in VALID_TOP_LEVELS:
 		return False
 	return True
+
+def clear_string(text):
+	# print(text)
+	return ''.join(c for c in text if c.isalpha())
+
+def language_check(headers):
+	if len(headers) < 0:
+		return True
+	count_valid = 0
+	count_unvalid = 0
+	for key in headers:
+		splits = headers[key].split()
+		words = [clear_string(split) for split in splits]
+		for word in words:
+			if len(word) > 2:
+				valid = False
+				for d in enchant_dicts:
+					if d.check(word):
+						count_valid += 1
+						valid = True
+						break
+				if not valid:
+					count_unvalid += 1
+	if count_valid >= count_unvalid:
+		return True
+	else:
+		return False
 
 def main(argc, argv):
 	DB_OUTPUT = 'output.db'
