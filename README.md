@@ -21,7 +21,7 @@ To run the code you have to install [redis.io](https://redis.io/) and start a re
 ````
 redis-server
 ````
-After that you have to create the geo names index by running
+After that you have to create the [GeoNames](http://www.geonames.org) index by running
 ````
 # Download Geo Names Gazetteer Data
 mkdir data
